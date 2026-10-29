@@ -284,10 +284,10 @@ export default function ContractForm({
         ...current.schedule,
         {
           sequence: current.schedule.length + 1,
-          due_date: current.firstInstallmentDate || today(),
+          due_date: today(),
           amount: 0,
           paid: false,
-          paid_date: current.firstInstallmentDate || today(),
+          paid_date: today(),
           method: 'bank',
           reference: '',
         },
