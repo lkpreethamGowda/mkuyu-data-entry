@@ -17,6 +17,10 @@ Open http://localhost:5173. Sign in with an Odoo staff account that belongs to
 one of the import groups (IT Lead, CFO, CDL Finance Head, CDL Sales Admin or
 Settings).
 
+For the local Docker Odoo, set `VITE_ODOO_URL=http://127.0.0.1:8069` in `.env`
+(or `.env.local`) and sign in with a local test user such as
+`it_lead@mkuyu.test` / `mkuyu-test`.
+
 ## What it does
 
 1. Create a batch (e.g. “UDOWE existing contracts”, source “UDOWE PROJECT.xlsx”).
