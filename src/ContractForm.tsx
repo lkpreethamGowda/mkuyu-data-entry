@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import type {
   Batch,
   Contract,
@@ -120,6 +120,7 @@ export default function ContractForm({
   const [server, setServer] = useState<Contract | null>(contract)
   const [busy, setBusy] = useState<Busy>(null)
   const [error, setError] = useState('')
+  const externalRefInput = useRef<HTMLInputElement>(null)
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((current) => ({ ...current, [key]: value }))
@@ -177,7 +178,9 @@ export default function ContractForm({
 
   const warnings = useMemo(() => {
     const list: string[] = []
-    if (!form.externalRef.trim()) list.push('Contract reference is required.')
+    if (!form.externalRef.trim()) {
+      list.push('Contract reference is missing. Enter the reference from the signed agreement (for example U0201-PREETHAAM); it must be unique.')
+    }
     if (!form.partnerId && !form.partnerName.trim()) list.push('Select a client or enter the client name.')
     if (!form.siteId) list.push('Select a site.')
     if (!form.unitId) list.push('Select an existing unit.')
@@ -339,6 +342,11 @@ export default function ContractForm({
   }
 
   async function save(): Promise<Contract | null> {
+    if (!form.externalRef.trim()) {
+      externalRefInput.current?.focus()
+      externalRefInput.current?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+      return null
+    }
     setBusy('save')
     setError('')
     try {
@@ -453,7 +461,17 @@ export default function ContractForm({
             </select>
           </label>
           <label>Contract reference
-            <input value={form.externalRef} onChange={(event) => set('externalRef', event.target.value)} placeholder="UDOWE-201-MOHAMED" />
+            <input
+              ref={externalRefInput}
+              className={!form.externalRef.trim() ? 'input-invalid' : undefined}
+              aria-invalid={!form.externalRef.trim()}
+              value={form.externalRef}
+              onChange={(event) => set('externalRef', event.target.value)}
+              placeholder="UDOWE-201-MOHAMED"
+            />
+            {!form.externalRef.trim() ? (
+              <span className="field-error">Enter the contract reference before saving.</span>
+            ) : null}
           </label>
         </div>
         {form.partnerId ? (
