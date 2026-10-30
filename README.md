@@ -4,8 +4,9 @@ React + Vite page for loading **existing/backlog** property sale contracts into
 Odoo through the `mkuyu_cdl_legacy_import` API. It has no backend of its own: it
 signs in to Odoo with the staff login endpoint and calls `/api/v1/legacy/*`.
 
-The page opens one assigned contract list (default: **UDOWE existing contracts
-— Oct 2026**). There is no list selector and no “create list” option.
+The page opens one assigned contract list (default: **Backfill**; it falls back
+to an existing UDOWE list). There is no list selector and no “create list”
+option.
 
 ## Run locally
 
@@ -13,7 +14,7 @@ The page opens one assigned contract list (default: **UDOWE existing contracts
 cp .env.example .env
 # edit .env:
 # VITE_ODOO_URL=https://your-odoo.example.com
-# VITE_BATCH_NAME=UDOWE existing contracts — Oct 2026
+# VITE_BATCH_NAME=Backfill
 npm install
 npm run dev
 ```
@@ -28,9 +29,10 @@ For the local Docker Odoo, set `VITE_ODOO_URL=http://127.0.0.1:8069` in `.env`
 Both variables are **required**:
 
 - `VITE_ODOO_URL` — the Odoo base URL, no trailing slash.
-- `VITE_BATCH_NAME` — the contract list to open after login. The fallback
-  matches any name containing `UDOWE existing contracts`, so the em dash is not
-  critical.
+- `VITE_BATCH_NAME` — the contract list to open after login (default
+  `Backfill`). The fallback matches a list starting with `Backfill`, then any
+  name containing `UDOWE existing contracts`, so an existing UDOWE list still
+  opens.
 
 If `VITE_ODOO_URL` is missing, the app shows a configuration screen instead of
 the login form.

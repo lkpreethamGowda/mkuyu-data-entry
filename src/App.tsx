@@ -17,8 +17,8 @@ import { money } from './format'
 
 type Screen = 'list' | 'contract'
 
-const BATCH_NAME = import.meta.env.VITE_BATCH_NAME || 'UDOWE existing contracts — Oct 2026'
-const BATCH_FALLBACK = 'UDOWE existing contracts'
+const BATCH_NAME = import.meta.env.VITE_BATCH_NAME || 'Backfill'
+const BATCH_FALLBACKS = ['Backfill', 'UDOWE existing contracts']
 
 export default function App() {
   const [user, setUser] = useState<SessionUser | null>(() => storedUser())
@@ -48,7 +48,8 @@ export default function App() {
         const [loadedLookups, batches] = await Promise.all([getLookups(), listBatches()])
         const target =
           batches.find((item) => item.name === BATCH_NAME) ||
-          batches.find((item) => item.name.includes(BATCH_FALLBACK))
+          batches.find((item) => item.name.startsWith(BATCH_FALLBACKS[0])) ||
+          batches.find((item) => item.name.includes(BATCH_FALLBACKS[1]))
         if (!target) {
           if (!cancelled) {
             setUnavailable(true)
@@ -181,13 +182,7 @@ export default function App() {
     return (
       <div className="login-wrap">
         <div className="login-card">
-          <div className="brand big login-brand">
-            <span className="brand-mark">M</span>
-            <div>
-              <strong>MKUYU</strong>
-              <span>Backlog contract entry</span>
-            </div>
-          </div>
+          <Brand big />
           <h2>Could not load the contract list</h2>
           <p className="muted">{error || 'Unknown error.'}</p>
           <button className="btn primary block" onClick={() => window.location.reload()}>Retry</button>
@@ -205,13 +200,7 @@ export default function App() {
   return (
     <div className="app">
       <header className="topbar">
-        <div className="brand">
-          <span className="brand-mark">M</span>
-          <div>
-            <strong>MKUYU</strong>
-            <span>Backlog contract entry</span>
-          </div>
-        </div>
+        <Brand />
         <div className="topbar-right">
           <span className={`env-chip ${local ? 'local' : staging ? 'staging' : 'live'}`} title={odooUrl()}>
             {environment} · {host}
@@ -256,17 +245,25 @@ export default function App() {
   )
 }
 
+function Brand({ big = false }: { big?: boolean }) {
+  return (
+    <div className={`brand${big ? ' big login-brand' : ''}`}>
+      <span className="brand-mark">
+        <img src="/mkuyu-logo.svg" alt="" />
+      </span>
+      <div>
+        <strong>MKUYU</strong>
+        <span>Backlog contract entry</span>
+      </div>
+    </div>
+  )
+}
+
 function ConfigScreen() {
   return (
     <div className="login-wrap">
       <div className="login-card">
-        <div className="brand big login-brand">
-          <span className="brand-mark">M</span>
-          <div>
-            <strong>MKUYU</strong>
-            <span>Backlog contract entry</span>
-          </div>
-        </div>
+        <Brand big />
         <h2>Odoo URL is not configured</h2>
         <p className="muted">
           This deployment is missing the <code>VITE_ODOO_URL</code> build variable.
@@ -282,13 +279,7 @@ function UnavailableScreen({ batchName, onLogout }: { batchName: string; onLogou
   return (
     <div className="login-wrap">
       <div className="login-card">
-        <div className="brand big login-brand">
-          <span className="brand-mark">M</span>
-          <div>
-            <strong>MKUYU</strong>
-            <span>Backlog contract entry</span>
-          </div>
-        </div>
+        <Brand big />
         <h2>Contract list not available</h2>
         <p className="muted">
           The assigned list <b>{batchName}</b> was not found. Contact MKUYU support; do not
@@ -323,13 +314,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: SessionUser) => void }) {
   return (
     <div className="login-wrap">
       <form className="login-card" onSubmit={submit}>
-        <div className="brand big login-brand">
-          <span className="brand-mark">M</span>
-          <div>
-            <strong>MKUYU</strong>
-            <span>Backlog contract entry</span>
-          </div>
-        </div>
+        <Brand big />
         <p className="muted">
           Sign in with the Odoo account provided by MKUYU to enter existing/backlog contracts.
         </p>

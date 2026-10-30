@@ -63,15 +63,16 @@ Never commit `.env` or a real password.
    | Name | Value | Environments |
    |---|---|---|
    | `VITE_ODOO_URL` | `https://your-odoo.example.com` | Production and Preview |
-   | `VITE_BATCH_NAME` | `UDOWE existing contracts — Oct 2026` | Production and Preview |
+   | `VITE_BATCH_NAME` | `Backfill` | Production and Preview |
 
    - No trailing slash in the URL.
    - Use the exact Odoo base URL, including `https://`.
    - For staging first: the staging URL.
    - For production later: the production URL; this requires a new deployment.
    - `VITE_BATCH_NAME` is the existing contract list the page opens after login.
-     The code also falls back to any name containing
-     `UDOWE existing contracts`, so the em dash is not critical.
+     Default `Backfill`; the code also falls back to a list starting with
+     `Backfill`, then to any name containing `UDOWE existing contracts`, so an
+     existing UDOWE deployment still opens.
 
 8. Click **Deploy**.
 
@@ -90,8 +91,8 @@ Open the Vercel URL and check:
    - **LOCAL** for localhost.
 2. The login page shows the correct Odoo URL.
 3. Sign in with the client's Odoo user.
-4. The page lands directly on the assigned contract list
-   (`UDOWE existing contracts — Oct 2026`), with no list selector or create
+4. The page lands directly on the assigned contract list (default `Backfill`,
+   falling back to the existing UDOWE list), with no list selector or create
    option.
 5. The building and unit filters work and show “Showing X of Y”.
 6. Create a draft contract; select an existing contact and an **existing unit**;
@@ -183,7 +184,7 @@ Vercel → Project → Settings → Domains → add e.g.
 cd C:\Users\preet\Downloads\mkuyu-legacy-import-ui
 copy .env.example .env
 # edit .env: VITE_ODOO_URL=https://your-odoo.example.com
-#             VITE_BATCH_NAME=UDOWE existing contracts — Oct 2026
+#             VITE_BATCH_NAME=Backfill
 npm install
 npm run build
 npm run dev

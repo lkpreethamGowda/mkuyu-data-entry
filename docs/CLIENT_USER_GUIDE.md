@@ -16,8 +16,8 @@ installments already paid, and the remaining monthly plan.
 **Do not use this page for a new sale.** New sales follow the normal Odoo
 reservation → down payment → installment flow.
 
-The page opens directly on the **UDOWE existing contracts — Oct 2026** list.
-There is nothing to create or select before you start.
+The page opens directly on the assigned contract list. Its name is shown at the
+top. There is nothing to create or select before you start.
 
 ---
 
@@ -43,7 +43,8 @@ Confirm the badge and the Odoo address before you type anything.
 
 ## 3. The contract list
 
-After signing in you land on **UDOWE existing contracts — Oct 2026**.
+After signing in you land on the assigned contract list. The name, source file
+and company are shown at the top.
 
 At the top:
 
