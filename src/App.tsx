@@ -511,7 +511,7 @@ function ContractList({
                   >
                     {item.agreement.installment_count}
                   </td>
-                  <td><span className={`badge state-${item.state}`}>{item.state}</span></td>
+                  <td className="col-state"><span className={`badge state-${item.state}`}>{item.state}</span></td>
                 </tr>
               )
             })}

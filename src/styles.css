@@ -164,6 +164,8 @@ textarea { resize: vertical; }
 .contracts-table col.w-state { width: 10%; }
 .contracts-table td.col-unit { font-size: 12px; line-height: 1.25; white-space: normal; overflow-wrap: anywhere; }
 .contracts-table .badge { margin-left: 0; }
+.contracts-table .col-state { text-align: center; }
+.contracts-table .col-state .badge { display: inline-block; }
 .contracts-table tbody tr.contract-row { cursor: pointer; }
 .contracts-table tbody tr.contract-row:hover td { background: #f1f5f9; }
 .contracts-table tbody tr.contract-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
