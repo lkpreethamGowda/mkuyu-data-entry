@@ -140,6 +140,8 @@ textarea { resize: vertical; }
 .subsection-head h4 { margin: 0 0 10px; padding-top: 0; border-top: 0; }
 
 .table { width: 100%; border-collapse: collapse; }
+.table-wrap { overflow-x: auto; }
+.table .num { white-space: nowrap; }
 .table th {
   text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .04em;
   color: var(--muted); padding: 8px; border-bottom: 1px solid var(--line);

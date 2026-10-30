@@ -65,7 +65,9 @@ contact, selecting an existing unit, validation, commit and common messages.
 ## What it does
 
 1. After login, opens the assigned contract list directly.
-2. Filters the list by **building** and **unit**.
+2. Filters the list by **building** and **unit**. Each row shows the Per Agreement
+   price, down payment (net), listed installments, balance (net) and the number
+   of future installments.
 3. **New contract**:
    - select an existing contact or click **New contact** to enter one (the
      contact is created on commit);

@@ -452,9 +452,14 @@ function ContractList({
       </section>
 
       <section className="card">
+        <div className="table-wrap">
         <table className="table">
           <thead>
-            <tr><th>Reference</th><th>Client</th><th>Unit</th><th>Price</th><th>State</th><th>Error</th><th /></tr>
+            <tr>
+              <th>Reference</th><th>Client</th><th>Unit</th><th>Price</th>
+              <th>Down payment (net)</th><th>Listed installments</th><th>Balance (net)</th>
+              <th>Future installments</th><th>State</th><th>Error</th><th />
+            </tr>
           </thead>
           <tbody>
             {filtered.map((item) => {
@@ -467,7 +472,20 @@ function ContractList({
                     {item.unit.unit_code || '—'}
                     {building ? <div className="muted small">{building.name}</div> : null}
                   </td>
-                  <td>{money(item.amounts.contract_gross)}</td>
+                  <td className="num">{money(item.amounts.contract_gross)}</td>
+                  <td className="num">{money(item.amounts.down_payment_net)}</td>
+                  <td className="num">{money(item.amounts.schedule_gross)}</td>
+                  <td className="num">{money(item.amounts.remaining_net)}</td>
+                  <td
+                    className="num"
+                    title={
+                      item.agreement.installment_count
+                        ? `${item.agreement.installment_count} × ${money(item.amounts.installment_gross)} gross per month`
+                        : 'No remaining installments'
+                    }
+                  >
+                    {item.agreement.installment_count}
+                  </td>
                   <td><span className={`badge state-${item.state}`}>{item.state}</span></td>
                   <td className="error-text">{item.error_message || ''}</td>
                   <td><button className="btn small" onClick={() => onOpenContract(item)}>Open</button></td>
@@ -476,13 +494,14 @@ function ContractList({
             })}
             {!filtered.length ? (
               <tr>
-                <td colSpan={7} className="muted center">
+                <td colSpan={11} className="muted center">
                   {contracts.length ? 'No contracts match these filters.' : 'No contracts yet.'}
                 </td>
               </tr>
             ) : null}
           </tbody>
         </table>
+        </div>
       </section>
     </div>
   )
