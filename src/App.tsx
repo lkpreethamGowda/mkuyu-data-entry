@@ -152,7 +152,9 @@ export default function App() {
   }
 
   const host = odooUrl().replace(/^https?:\/\//, '')
+  const local = /^(localhost|127\.0\.0\.1)/i.test(host)
   const staging = /staging|\.dev\./i.test(host)
+  const environment = local ? 'LOCAL' : staging ? 'STAGING' : 'PRODUCTION'
 
   return (
     <div className="app">
@@ -165,8 +167,8 @@ export default function App() {
           </div>
         </div>
         <div className="topbar-right">
-          <span className={`env-chip ${staging ? 'staging' : 'live'}`} title={odooUrl()}>
-            {staging ? 'STAGING' : 'PRODUCTION'} · {host}
+          <span className={`env-chip ${local ? 'local' : staging ? 'staging' : 'live'}`} title={odooUrl()}>
+            {environment} · {host}
           </span>
           <span className="muted">{user.name} · {user.role}</span>
           <button className="btn small" onClick={logout}>Log out</button>
