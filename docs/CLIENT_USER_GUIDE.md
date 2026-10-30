@@ -73,11 +73,11 @@ The table shows:
 | Reference | The contract reference (unique). |
 | Client | The buyer. |
 | Unit | The unit code and building. |
-| Price | Per Agreement price in TZS (gross). |
+| Per Agreement Price | Per Agreement price in TZS (gross). |
 | Down payment (net) | Down payment excluding VAT. |
-| Listed installments | Total gross of the previous installments in the table. |
+| Paid Installment | Total gross of the previous installments in the table. |
 | Balance (net) | Amount still to be paid by the remaining installments, excluding VAT. |
-| Future installments | Number of remaining monthly installments. Hover for the monthly amount. |
+| Future Installments Count | Number of remaining monthly installments. Hover for the monthly amount. |
 | State | Draft / Valid / Committed / Failed. |
 | Error | The last error, if any. |
 | Open | Open the contract. |

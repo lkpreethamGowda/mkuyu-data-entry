@@ -456,9 +456,9 @@ function ContractList({
         <table className="table">
           <thead>
             <tr>
-              <th>Reference</th><th>Client</th><th>Unit</th><th>Price</th>
-              <th>Down payment (net)</th><th>Listed installments</th><th>Balance (net)</th>
-              <th>Future installments</th><th>State</th><th>Error</th><th />
+              <th>Reference</th><th>Client</th><th>Unit</th><th>Per Agreement Price</th>
+              <th>Down payment (net)</th><th>Paid Installment</th><th>Balance (net)</th>
+              <th>Future Installments Count</th><th>State</th><th>Error</th><th />
             </tr>
           </thead>
           <tbody>
