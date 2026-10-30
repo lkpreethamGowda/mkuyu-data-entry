@@ -31,6 +31,13 @@ git commit -m "Backlog contract entry UI: Vercel-ready, client guide"
 git push -u origin feature/backlog-entry-ui
 ```
 
+If the repository does not have a remote yet:
+
+```bash
+git remote add origin git@github.com:<your-org>/<your-ui-repo>.git
+git push -u origin feature/backlog-entry-ui
+```
+
 Or push to whichever branch you want Vercel to build.
 
 The repository already contains:
