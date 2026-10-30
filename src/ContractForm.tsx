@@ -670,12 +670,12 @@ export default function ContractForm({
         <section className="card">
           <h3>Committed</h3>
           <div className="grid two">
-            <div><span className="label">Client</span><b>{server.result.partner_id}</b></div>
-            <div><span className="label">Unit</span><b>{server.result.unit_id}</b></div>
-            <div><span className="label">Down payment order</span><b>{server.result.order_name || '—'}</b></div>
-            <div><span className="label">Subscription</span><b>{server.result.subscription_name || '—'}</b></div>
-            <div><span className="label">Invoices</span><b>{server.result.invoice_names.join(', ') || '—'}</b></div>
-            <div><span className="label">Payments</span><b>{server.result.payment_names.join(', ') || '—'}</b></div>
+            <div className="result-line"><span className="label">Client</span><b>{server.result.partner_id}</b></div>
+            <div className="result-line"><span className="label">Unit</span><b>{server.result.unit_id}</b></div>
+            <div className="result-line"><span className="label">Down payment order</span><b>{server.result.order_name || '—'}</b></div>
+            <div className="result-line"><span className="label">Subscription</span><b>{server.result.subscription_name || '—'}</b></div>
+            <div className="result-line"><span className="label">Invoices</span><b>{server.result.invoice_names.join(', ') || '—'}</b></div>
+            <div className="result-line"><span className="label">Payments</span><b>{server.result.payment_names.join(', ') || '—'}</b></div>
           </div>
         </section>
       ) : null}
