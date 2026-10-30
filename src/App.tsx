@@ -18,7 +18,6 @@ import { money } from './format'
 type Screen = 'list' | 'contract'
 
 const BATCH_NAME = import.meta.env.VITE_BATCH_NAME || 'Backfill'
-const BATCH_FALLBACKS = ['Backfill', 'UDOWE existing contracts']
 
 export default function App() {
   const [user, setUser] = useState<SessionUser | null>(() => storedUser())
@@ -48,8 +47,10 @@ export default function App() {
         const [loadedLookups, batches] = await Promise.all([getLookups(), listBatches()])
         const target =
           batches.find((item) => item.name === BATCH_NAME) ||
-          batches.find((item) => item.name.startsWith(BATCH_FALLBACKS[0])) ||
-          batches.find((item) => item.name.includes(BATCH_FALLBACKS[1]))
+          (BATCH_NAME === 'Backfill'
+            ? batches.find((item) => item.name.startsWith('Backfill')) ||
+              batches.find((item) => item.name.includes('UDOWE existing contracts'))
+            : null)
         if (!target) {
           if (!cancelled) {
             setUnavailable(true)
