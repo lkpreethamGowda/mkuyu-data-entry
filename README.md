@@ -76,7 +76,7 @@ administrator.
 ## Safety features
 
 - STAGING / PRODUCTION / LOCAL badge and the Odoo host in the header.
-- Confirmation before a single or batch commit.
+- Confirmation before a single or multiple contract commit.
 - Committed contracts are read-only.
 - TZS only; USD contracts are rejected by the API.
 - Existing units only; the form no longer exposes unit creation.
