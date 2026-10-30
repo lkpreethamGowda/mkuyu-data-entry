@@ -454,6 +454,19 @@ function ContractList({
       <section className="card">
         <div className="table-wrap">
         <table className="table contracts-table">
+          <colgroup>
+            <col className="w-ref" />
+            <col className="w-client" />
+            <col className="w-unit" />
+            <col className="w-price" />
+            <col className="w-dp" />
+            <col className="w-paid" />
+            <col className="w-balance" />
+            <col className="w-future" />
+            <col className="w-state" />
+            <col className="w-error" />
+            <col className="w-actions" />
+          </colgroup>
           <thead>
             <tr>
               <th>Reference</th><th>Client</th><th>Unit</th><th>Per Agreement Price</th>
@@ -466,16 +479,16 @@ function ContractList({
               const building = lookups.buildings.find((candidate) => candidate.id === item.unit.building_id)
               return (
                 <tr key={item.id}>
-                  <td><b>{item.external_ref}</b></td>
-                  <td>{item.client.name || '—'}</td>
-                  <td>
+                  <td title={item.external_ref}><b>{item.external_ref}</b></td>
+                  <td title={item.client.name || ''}>{item.client.name || '—'}</td>
+                  <td className="col-unit">
                     {item.unit.unit_code || '—'}
                     {building ? <div className="muted small">{building.name}</div> : null}
                   </td>
-                  <td className="num">{money(item.amounts.contract_gross)}</td>
-                  <td className="num">{money(item.amounts.down_payment_net)}</td>
-                  <td className="num">{money(item.amounts.schedule_gross)}</td>
-                  <td className="num">{money(item.amounts.remaining_net)}</td>
+                  <td className="num" title={money(item.amounts.contract_gross)}>{money(item.amounts.contract_gross)}</td>
+                  <td className="num" title={money(item.amounts.down_payment_net)}>{money(item.amounts.down_payment_net)}</td>
+                  <td className="num" title={money(item.amounts.schedule_gross)}>{money(item.amounts.schedule_gross)}</td>
+                  <td className="num" title={money(item.amounts.remaining_net)}>{money(item.amounts.remaining_net)}</td>
                   <td
                     className="num"
                     title={
