@@ -91,6 +91,9 @@ Open the Vercel URL and check:
 7. Commit one pilot contract; verify the order/invoice/payment in Odoo.
 8. Log out.
 
+After the deployment, open `docs/CLIENT_USER_GUIDE.md` and fill in the
+**Access link** and **Support** fields before sending it to the client.
+
 If the page says **“Odoo URL is not configured”**, the `VITE_ODOO_URL` variable
 was not present at build time. Add it and redeploy.
 
