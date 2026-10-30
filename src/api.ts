@@ -7,7 +7,7 @@ import type {
   SessionUser,
 } from './types'
 
-const ODOO_URL = (import.meta.env.VITE_ODOO_URL || 'https://mkuyu-operations-staging-40837267.dev.odoo.com').replace(/\/+$/, '')
+const ODOO_URL = (import.meta.env.VITE_ODOO_URL || '').replace(/\/+$/, '')
 const API = `${ODOO_URL}/api/v1`
 
 const TOKEN_KEY = 'mkuyu.legacy.access'
@@ -187,4 +187,8 @@ export async function commitBatch(
 
 export function odooUrl(): string {
   return ODOO_URL
+}
+
+export function isConfigured(): boolean {
+  return Boolean(ODOO_URL)
 }

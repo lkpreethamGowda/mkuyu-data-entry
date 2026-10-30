@@ -368,6 +368,14 @@ export default function ContractForm({
   }
 
   async function commit() {
+    const label = contract?.external_ref || server?.external_ref || form.externalRef || 'this contract'
+    if (!window.confirm(
+      `Commit ${label} to Odoo?\n\nContract value: ${money(form.contractPrice)}\n` +
+      'This creates the client, sale order, invoices, payments and installment plan. ' +
+      'It cannot be edited afterwards.',
+    )) {
+      return
+    }
     const current = contract || server || (await save())
     if (!current) return
     setBusy('commit')
@@ -429,6 +437,7 @@ export default function ContractForm({
         </div>
       ) : null}
 
+      <fieldset className="form-fields" disabled={committed}>
       <section className="card">
         <h3>1. Client</h3>
         <div className="grid two">
@@ -576,6 +585,7 @@ export default function ContractForm({
             <input type="date" value={form.firstInstallmentDate} onChange={(event) => set('firstInstallmentDate', event.target.value)} />
           </label>
         </div>
+        <p className="muted small">All amounts are in TZS. USD contracts are not supported in this form.</p>
       </section>
 
       <section className="card">
@@ -648,6 +658,7 @@ export default function ContractForm({
         <h3>6. Notes</h3>
         <textarea rows={3} value={form.notes} onChange={(event) => set('notes', event.target.value)} />
       </section>
+      </fieldset>
     </div>
   )
 }

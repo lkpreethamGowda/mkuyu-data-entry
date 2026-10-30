@@ -7,6 +7,7 @@ import {
   createBatch,
   getBatch,
   getLookups,
+  isConfigured,
   listBatches,
   login,
   odooUrl,
@@ -31,6 +32,10 @@ export default function App() {
   useEffect(() => {
     let cancelled = false
     async function boot() {
+      if (!isConfigured()) {
+        setBooting(false)
+        return
+      }
       if (!user) {
         setBooting(false)
         return
@@ -103,6 +108,11 @@ export default function App() {
 
   async function handleCommitBatch() {
     if (!batch) return
+    const count = (batch.contracts || []).filter((item) => item.state !== 'committed' && item.state !== 'cancelled').length
+    if (!count) return
+    if (!window.confirm(`Commit ${count} contract${count === 1 ? '' : 's'} to Odoo?\n\nThis creates the sale orders, invoices, payments and installment plans. It cannot be edited afterwards.`)) {
+      return
+    }
     setBusy(true)
     setError('')
     try {
@@ -133,9 +143,16 @@ export default function App() {
     return <div className="boot">Loading…</div>
   }
 
+  if (!isConfigured()) {
+    return <ConfigScreen />
+  }
+
   if (!user) {
     return <LoginScreen onLogin={(session) => { setError(''); setUser(session) }} />
   }
+
+  const host = odooUrl().replace(/^https?:\/\//, '')
+  const staging = /staging|\.dev\./i.test(host)
 
   return (
     <div className="app">
@@ -144,10 +161,13 @@ export default function App() {
           <span className="brand-mark">M</span>
           <div>
             <strong>MKUYU</strong>
-            <span>Legacy contract import</span>
+            <span>Backlog contract entry</span>
           </div>
         </div>
         <div className="topbar-right">
+          <span className={`env-chip ${staging ? 'staging' : 'live'}`} title={odooUrl()}>
+            {staging ? 'STAGING' : 'PRODUCTION'} · {host}
+          </span>
           <span className="muted">{user.name} · {user.role}</span>
           <button className="btn small" onClick={logout}>Log out</button>
         </div>
@@ -201,6 +221,33 @@ export default function App() {
 
         {screen === 'contract' && !lookups ? <div className="boot">Loading reference data…</div> : null}
       </main>
+
+      <footer className="footer">
+        <span>MKUYU · Backlog contract entry</span>
+        <span>{host}</span>
+      </footer>
+    </div>
+  )
+}
+
+function ConfigScreen() {
+  return (
+    <div className="login-wrap">
+      <div className="login-card">
+        <div className="brand big">
+          <span className="brand-mark">M</span>
+          <div>
+            <strong>MKUYU</strong>
+            <span>Backlog contract entry</span>
+          </div>
+        </div>
+        <h2>Odoo URL is not configured</h2>
+        <p className="muted">
+          This deployment is missing the <code>VITE_ODOO_URL</code> build variable.
+          Set it in Vercel → Project → Settings → Environment Variables, then redeploy.
+        </p>
+        <pre className="config-example">VITE_ODOO_URL=https://your-odoo.example.com</pre>
+      </div>
     </div>
   )
 }
@@ -267,8 +314,11 @@ function BatchList({
     <div className="page">
       <div className="page-head">
         <div>
-          <h2>Import batches</h2>
-          <p className="muted">Group one client file, review each contract, then commit to Odoo.</p>
+          <h2>Contract batches</h2>
+          <p className="muted">
+            Use this only for existing/backlog contracts. New sales must use the normal Odoo
+            reservation and installment flow. Group one file/client, review each contract, then commit.
+          </p>
         </div>
       </div>
 

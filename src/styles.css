@@ -162,6 +162,52 @@ textarea { resize: vertical; }
 .login-card .brand strong, .login-card .brand span { color: var(--ink); }
 .boot { min-height: 60vh; display: grid; place-items: center; color: var(--muted); }
 
+.env-chip {
+  display: inline-flex;
+  align-items: center;
+  max-width: 330px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.env-chip.staging { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
+.env-chip.live { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+
+.footer {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 20px 30px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 11px;
+  flex-wrap: wrap;
+}
+
+.form-fields { border: 0; padding: 0; margin: 0; min-width: 0; }
+.form-fields:disabled { opacity: .78; }
+.form-fields:disabled .card { background: #fbfcfd; }
+
+.config-example {
+  background: #0b2b2a;
+  color: #e6fffa;
+  padding: 12px;
+  border-radius: 8px;
+  overflow: auto;
+  font-size: 12px;
+}
+
+@media (max-width: 760px) {
+  .env-chip { max-width: 100%; }
+  .footer { flex-direction: column; }
+}
+
 @media (max-width: 760px) {
   .grid.two, .grid.three, .grid.four, .stats { grid-template-columns: 1fr; }
   .page-head { align-items: flex-start; }
