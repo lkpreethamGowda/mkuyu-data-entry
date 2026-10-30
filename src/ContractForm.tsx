@@ -7,7 +7,7 @@ import type {
   ScheduleLine,
 } from './types'
 import { addContract, commitContract, updateContract } from './api'
-import { addMonths, money, parseFloor, sideLabel, today } from './format'
+import { addMonths, money, today } from './format'
 
 type Busy = 'save' | 'commit' | null
 
@@ -23,12 +23,7 @@ interface FormState {
   buildingId: number | ''
   unitId: number | ''
   unitCode: string
-  floorText: string
-  floor: number | null
-  side: 'road' | 'back' | ''
   unitType: string
-  sizeSqm: number
-  createIfMissing: boolean
   contractPrice: number
   priceIncludesVat: boolean
   taxId: number | ''
@@ -46,6 +41,10 @@ interface FormState {
 function initialForm(batch: Batch, lookups: Lookups, contract: Contract | null): FormState {
   const firstTax = lookups.taxes.find((tax) => tax.company_id === batch.company.id) || lookups.taxes[0]
   const start = today()
+  const batchSiteId = batch.contracts?.[0]?.unit.site_id || ''
+  const fallbackSite = lookups.sites.find((item) => item.company_id === batch.company.id)
+  const defaultSiteId = batchSiteId || fallbackSite?.id || ''
+  const defaultBuildingId = batch.contracts?.[0]?.unit.building_id || ''
   if (!contract) {
     return {
       externalRef: '',
@@ -55,16 +54,11 @@ function initialForm(batch: Batch, lookups: Lookups, contract: Contract | null):
       partnerEmail: '',
       nationalId: '',
       customerId: '',
-      siteId: '',
-      buildingId: '',
+      siteId: defaultSiteId,
+      buildingId: defaultBuildingId,
       unitId: '',
       unitCode: '',
-      floorText: '',
-      floor: null,
-      side: '',
       unitType: 'apartment',
-      sizeSqm: 0,
-      createIfMissing: false,
       contractPrice: 0,
       priceIncludesVat: true,
       taxId: firstTax?.id || '',
@@ -87,16 +81,11 @@ function initialForm(batch: Batch, lookups: Lookups, contract: Contract | null):
     partnerEmail: contract.client.email,
     nationalId: contract.client.national_id,
     customerId: contract.client.customer_id,
-    siteId: contract.unit.site_id || '',
+    siteId: contract.unit.site_id || defaultSiteId,
     buildingId: contract.unit.building_id || '',
     unitId: contract.unit.unit_id || '',
     unitCode: contract.unit.unit_code,
-    floorText: contract.unit.floor ? `${contract.unit.floor} ${contract.unit.side || ''}`.trim() : '',
-    floor: contract.unit.floor,
-    side: (contract.unit.side as 'road' | 'back' | null) || '',
     unitType: contract.unit.unit_type || 'apartment',
-    sizeSqm: 0,
-    createIfMissing: false,
     contractPrice: contract.amounts.contract_gross,
     priceIncludesVat: contract.agreement.price_includes_vat ?? true,
     taxId: contract.agreement.tax_id || firstTax?.id || '',
@@ -155,7 +144,13 @@ export default function ContractForm({
   const building =
     lookups.buildings.find((item) => item.id === form.buildingId) ||
     (site?.building_ids.length ? lookups.buildings.find((item) => item.id === site.building_ids[0].id) : undefined)
-  const units = lookups.units.filter((unit) => !form.siteId || unit.site_id === form.siteId)
+  const selectedUnit = lookups.units.find((unit) => unit.id === Number(form.unitId))
+  const units = lookups.units.filter(
+    (unit) =>
+      unit.company_id === batch.company.id &&
+      (!form.siteId || unit.site_id === form.siteId) &&
+      (unit.status === 'available' || unit.id === Number(form.unitId)),
+  )
   const tax = lookups.taxes.find((item) => item.id === form.taxId)
   const rate = (tax?.amount || 0) / 100
   const toNet = (gross: number) => (form.priceIncludesVat && rate ? gross / (1 + rate) : gross)
@@ -171,18 +166,11 @@ export default function ContractForm({
   const installmentNet = form.installmentCount > 0 ? remainingNet / form.installmentCount : 0
   const installmentGross = form.priceIncludesVat && rate ? installmentNet * (1 + rate) : installmentNet
 
-  const series = form.side === 'road' ? '01' : form.side === 'back' ? '02' : ''
-  const expectedCode =
-    building && form.floor && series
-      ? `${building.code}-U${String(form.floor).padStart(2, '0')}${series}`
-      : ''
-  const existingUnit = lookups.units.find((unit) => unit.code === expectedCode)
-
   const warnings = useMemo(() => {
     const list: string[] = []
     if (!form.externalRef.trim()) list.push('Contract reference is required.')
     if (!form.partnerId && !form.partnerName.trim()) list.push('Select a client or enter the client name.')
-    if (!form.unitId && !form.unitCode.trim() && !expectedCode) list.push('Select a unit, or enter floor and side.')
+    if (!form.unitId) list.push('Select an existing unit.')
     if (Number(form.contractPrice) <= 0) list.push('Contract price must be greater than zero.')
     if (effectiveDownPayment + scheduleGross > Number(form.contractPrice) + 0.01) {
       list.push('Down payment plus the listed installments is more than the contract price.')
@@ -210,7 +198,7 @@ export default function ContractForm({
       list.push('Every listed installment needs an amount greater than zero.')
     }
     return list
-  }, [form, expectedCode, remainingNet, scheduleGross, effectiveDownPayment])
+  }, [form, remainingNet, scheduleGross, effectiveDownPayment])
 
   const committed = server?.state === 'committed' || contract?.state === 'committed'
 
@@ -232,19 +220,6 @@ export default function ContractForm({
     }))
   }
 
-  function changeSite(value: string) {
-    const id = value ? Number(value) : ''
-    const selected = lookups.sites.find((item) => item.id === id)
-    const firstBuilding = selected?.building_ids[0]
-    setForm((current) => ({
-      ...current,
-      siteId: id,
-      buildingId: firstBuilding?.id || '',
-      unitId: '',
-      unitCode: '',
-    }))
-  }
-
   function changeUnit(value: string) {
     const id = value ? Number(value) : ''
     const unit = lookups.units.find((item) => item.id === id)
@@ -254,19 +229,8 @@ export default function ContractForm({
       unitCode: unit?.code || '',
       siteId: unit?.site_id || current.siteId,
       buildingId: unit?.building_id || current.buildingId,
-      floor: unit?.floor ?? current.floor,
       unitType: unit?.unit_type || current.unitType,
       contractPrice: current.contractPrice || unit?.list_price || 0,
-    }))
-  }
-
-  function changeFloorText(value: string) {
-    const parsed = parseFloor(value)
-    setForm((current) => ({
-      ...current,
-      floorText: value,
-      floor: parsed.floor ?? current.floor,
-      side: (parsed.side as 'road' | 'back' | null) ?? current.side,
     }))
   }
 
@@ -320,15 +284,15 @@ export default function ContractForm({
         site_id: form.siteId ? Number(form.siteId) : null,
         site_code: site?.code || '',
         building_id: form.buildingId ? Number(form.buildingId) : null,
-        floor_text: form.floorText.trim(),
-        floor: form.floor,
-        side: form.side,
+        floor_text: '',
+        floor: null,
+        side: '',
         unit_type: form.unitType,
-        size_sqm: Number(form.sizeSqm) || 0,
+        size_sqm: 0,
         contract_price: Number(form.contractPrice) || 0,
         price_includes_vat: form.priceIncludesVat,
         tax_id: form.taxId ? Number(form.taxId) : null,
-        create_if_missing: form.createIfMissing,
+        create_if_missing: false,
       },
       agreement: {
         date: form.agreementDate,
@@ -399,10 +363,10 @@ export default function ContractForm({
     <div className="page">
       <div className="page-head">
         <div>
-          <button className="link" onClick={onBack}>← Back to {batch.name}</button>
-          <h2>{contract ? contract.external_ref : 'New legacy contract'}</h2>
+          <button className="link" onClick={onBack}>← Back to contracts</button>
+          <h2>{contract ? contract.external_ref : 'New contract'}</h2>
           <p className="muted">
-            Batch {batch.name} · {batch.company.name}
+            {batch.name} · {batch.company.name}
             {server ? <span className={`badge state-${server.state}`}>{server.state}</span> : null}
           </p>
         </div>
@@ -439,11 +403,11 @@ export default function ContractForm({
 
       <fieldset className="form-fields" disabled={committed}>
       <section className="card">
-        <h3>1. Client</h3>
+        <h3>1. Contact</h3>
         <div className="grid two">
-          <label>Existing client
+          <label>Contact
             <select value={form.partnerId} onChange={(event) => changePartner(event.target.value)}>
-              <option value="">— New client —</option>
+              <option value="">— Add a new contact —</option>
               {partnerOptions.map((partner) => (
                 <option key={partner.id} value={partner.id}>
                   {partner.name}{partner.phone ? ` · ${partner.phone}` : ''}
@@ -454,91 +418,66 @@ export default function ContractForm({
           <label>Contract reference
             <input value={form.externalRef} onChange={(event) => set('externalRef', event.target.value)} placeholder="UDOWE-201-MOHAMED" />
           </label>
-          <label>Client name
-            <input value={form.partnerName} onChange={(event) => set('partnerName', event.target.value)} />
-          </label>
-          <label>Phone
-            <input value={form.partnerPhone} onChange={(event) => set('partnerPhone', event.target.value)} placeholder="255 713 961 740" />
-          </label>
-          <label>Email
-            <input value={form.partnerEmail} onChange={(event) => set('partnerEmail', event.target.value)} />
-          </label>
-          <label>National ID
-            <input value={form.nationalId} onChange={(event) => set('nationalId', event.target.value)} />
-          </label>
-          <label>Customer ID
-            <input value={form.customerId} onChange={(event) => set('customerId', event.target.value)} />
-          </label>
         </div>
+        {form.partnerId ? (
+          <p className="hint ok">
+            Using existing contact: <b>{form.partnerName}</b>
+            {form.partnerPhone ? ` · ${form.partnerPhone}` : ''}
+            {form.partnerEmail ? ` · ${form.partnerEmail}` : ''}
+          </p>
+        ) : (
+          <>
+            <p className="muted small">
+              A new contact is created when this contract is committed. Units, buildings, taxes and prices come from existing records.
+            </p>
+            <div className="grid two">
+              <label>Name
+                <input value={form.partnerName} onChange={(event) => set('partnerName', event.target.value)} />
+              </label>
+              <label>Phone
+                <input value={form.partnerPhone} onChange={(event) => set('partnerPhone', event.target.value)} placeholder="255 713 961 740" />
+              </label>
+              <label>Email
+                <input value={form.partnerEmail} onChange={(event) => set('partnerEmail', event.target.value)} />
+              </label>
+              <label>National ID
+                <input value={form.nationalId} onChange={(event) => set('nationalId', event.target.value)} />
+              </label>
+              <label>Customer ID
+                <input value={form.customerId} onChange={(event) => set('customerId', event.target.value)} />
+              </label>
+            </div>
+          </>
+        )}
       </section>
 
       <section className="card">
         <h3>2. Unit</h3>
         <div className="grid two">
           <label>Site
-            <select value={form.siteId} onChange={(event) => changeSite(event.target.value)}>
-              <option value="">— Select site —</option>
-              {lookups.sites.filter((item) => item.company_id === batch.company.id).map((item) => (
-                <option key={item.id} value={item.id}>{item.code} · {item.name}</option>
-              ))}
-            </select>
+            <input className="readonly" value={site ? `${site.code} · ${site.name}` : '—'} readOnly />
           </label>
-          <label>Building
-            <select value={form.buildingId} onChange={(event) => set('buildingId', event.target.value ? Number(event.target.value) : '')}>
-              <option value="">— Select building —</option>
-              {lookups.buildings.filter((item) => !form.siteId || item.site_id === form.siteId).map((item) => (
-                <option key={item.id} value={item.id}>{item.code} · {item.name}</option>
-              ))}
-            </select>
-          </label>
-          <label>Existing unit
+          <label>Unit
             <select value={form.unitId} onChange={(event) => changeUnit(event.target.value)}>
-              <option value="">— Not selected —</option>
+              <option value="">— Select an existing unit —</option>
               {units.map((unit) => (
                 <option key={unit.id} value={unit.id}>
-                  {unit.code} · {unit.status}{unit.buyer_name ? ` · ${unit.buyer_name}` : ''}
+                  {unit.code} · {unit.name} · {unit.status}
+                  {unit.buyer_name ? ` · ${unit.buyer_name}` : ''}
                 </option>
               ))}
             </select>
           </label>
-          <label>Unit code (if known)
-            <input value={form.unitCode} onChange={(event) => set('unitCode', event.target.value)} placeholder="CDL-L06-UDOWE-B01-U0201" />
-          </label>
-          <label>Floor / side text
-            <input value={form.floorText} onChange={(event) => changeFloorText(event.target.value)} placeholder="2nd Road Side" />
-          </label>
-          <label>Floor
-            <input type="number" value={form.floor ?? ''} onChange={(event) => set('floor', event.target.value ? Number(event.target.value) : null)} />
-          </label>
-          <label>Side
-            <select value={form.side} onChange={(event) => set('side', event.target.value as 'road' | 'back' | '')}>
-              <option value="">— Select side —</option>
-              <option value="road">Road side (01 series)</option>
-              <option value="back">Back side (02 series)</option>
-            </select>
-          </label>
-          <label>Unit type
-            <select value={form.unitType} onChange={(event) => set('unitType', event.target.value)}>
-              <option value="apartment">Apartment</option>
-              <option value="shop">Shop</option>
-              <option value="office">Office</option>
-              <option value="plot">Plot</option>
-            </select>
-          </label>
-          <label>Size (sqm)
-            <input type="number" value={form.sizeSqm || ''} onChange={(event) => set('sizeSqm', Number(event.target.value) || 0)} />
-          </label>
-          <label className="checkbox">
-            <input type="checkbox" checked={form.createIfMissing} onChange={(event) => set('createIfMissing', event.target.checked)} />
-            Create the unit if it does not exist
-          </label>
         </div>
-        {expectedCode ? (
-          <p className={existingUnit ? 'hint ok' : 'hint warning'}>
-            Expected unit code: <b>{expectedCode}</b>{' '}
-            {existingUnit ? `— found (${existingUnit.status})` : form.createIfMissing ? '— will be created' : '— not found'}
-          </p>
-        ) : null}
+        {selectedUnit ? (
+          <div className="hint ok">
+            <b>{selectedUnit.code}</b> · {selectedUnit.name}
+            {building ? ` · ${building.name}` : ''} · {selectedUnit.unit_type} · {selectedUnit.status}
+            {selectedUnit.buyer_name ? ` · buyer ${selectedUnit.buyer_name}` : ''}
+          </div>
+        ) : (
+          <p className="hint warning">Select an existing unit. New units cannot be created here.</p>
+        )}
       </section>
 
       <section className="card">
@@ -635,9 +574,12 @@ export default function ContractForm({
           <div><span className="label">Future installment (net)</span><b>{money(installmentNet)}</b></div>
           <div><span className="label">Future installment (gross)</span><b>{money(installmentGross)}</b></div>
           <div><span className="label">VAT rate</span><b>{(rate * 100).toFixed(0)}%</b></div>
-          <div><span className="label">Unit</span><b>{form.unitCode || expectedCode || '—'}</b></div>
+          <div><span className="label">Unit</span><b>{selectedUnit?.code || form.unitCode || '—'}</b></div>
         </div>
-        <p className="muted">Side: {sideLabel(form.side)} · {form.installmentCount} remaining installment(s) · first {form.firstInstallmentDate || '—'}</p>
+        <p className="muted">
+          {selectedUnit ? `${selectedUnit.code} · ${selectedUnit.name}` : 'No unit selected'} ·{' '}
+          {form.installmentCount} remaining installment(s) · first {form.firstInstallmentDate || '—'}
+        </p>
       </section>
 
       {server?.result && server.state === 'committed' ? (
