@@ -109,7 +109,6 @@ input:focus, select:focus, textarea:focus {
   border-color: var(--accent);
 }
 input[type="checkbox"] { width: auto; }
-input.readonly { background: #f8fafc; color: var(--muted); }
 textarea { resize: vertical; }
 
 .btn {

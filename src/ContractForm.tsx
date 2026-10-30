@@ -46,7 +46,6 @@ function initialForm(batch: Batch, lookups: Lookups, contract: Contract | null):
   const batchSiteId = batch.contracts?.[0]?.unit.site_id || ''
   const fallbackSite = lookups.sites.find((item) => item.company_id === batch.company.id)
   const defaultSiteId = batchSiteId || fallbackSite?.id || ''
-  const defaultBuildingId = batch.contracts?.[0]?.unit.building_id || ''
   if (!contract) {
     return {
       externalRef: '',
@@ -57,7 +56,7 @@ function initialForm(batch: Batch, lookups: Lookups, contract: Contract | null):
       nationalId: '',
       customerId: '',
       siteId: defaultSiteId,
-      buildingId: defaultBuildingId,
+      buildingId: '',
       unitId: '',
       unitCode: '',
       unitType: 'apartment',
@@ -143,14 +142,15 @@ export default function ContractForm({
   }, [lookups.partners, contract])
 
   const site = lookups.sites.find((item) => item.id === form.siteId)
-  const building =
-    lookups.buildings.find((item) => item.id === form.buildingId) ||
-    (site?.building_ids.length ? lookups.buildings.find((item) => item.id === site.building_ids[0].id) : undefined)
   const selectedUnit = lookups.units.find((unit) => unit.id === Number(form.unitId))
+  const building = lookups.buildings.find(
+    (item) => item.id === (selectedUnit?.building_id ?? form.buildingId),
+  )
   const units = lookups.units.filter(
     (unit) =>
       unit.company_id === batch.company.id &&
-      (!form.siteId || unit.site_id === form.siteId) &&
+      !!form.siteId &&
+      unit.site_id === form.siteId &&
       (unit.status === 'available' || unit.id === Number(form.unitId)),
   )
   const tax = lookups.taxes.find((item) => item.id === form.taxId)
@@ -180,6 +180,7 @@ export default function ContractForm({
     const list: string[] = []
     if (!form.externalRef.trim()) list.push('Contract reference is required.')
     if (!form.partnerId && !form.partnerName.trim()) list.push('Select a client or enter the client name.')
+    if (!form.siteId) list.push('Select a site.')
     if (!form.unitId) list.push('Select an existing unit.')
     if (Number(form.contractPrice) <= 0) list.push('Per Agreement price must be greater than zero.')
     if (effectiveDownPayment + scheduleGross > Number(form.contractPrice) + 0.01) {
@@ -230,6 +231,17 @@ export default function ContractForm({
     }))
   }
 
+  function changeSite(value: string) {
+    const id = value ? Number(value) : ''
+    setForm((current) => ({
+      ...current,
+      siteId: id,
+      buildingId: '',
+      unitId: '',
+      unitCode: '',
+    }))
+  }
+
   function changeUnit(value: string) {
     const id = value ? Number(value) : ''
     const unit = lookups.units.find((item) => item.id === id)
@@ -238,7 +250,7 @@ export default function ContractForm({
       unitId: id,
       unitCode: unit?.code || '',
       siteId: unit?.site_id || current.siteId,
-      buildingId: unit?.building_id || current.buildingId,
+      buildingId: unit?.building_id || '',
       unitType: unit?.unit_type || current.unitType,
       contractPrice: current.contractPrice || unit?.list_price || 0,
     }))
@@ -483,11 +495,18 @@ export default function ContractForm({
         <h3>2. Unit</h3>
         <div className="grid two">
           <label>Site
-            <input className="readonly" value={site ? `${site.code} · ${site.name}` : '—'} readOnly />
+            <select value={form.siteId} onChange={(event) => changeSite(event.target.value)}>
+              <option value="">— Select a site —</option>
+              {lookups.sites
+                .filter((item) => item.company_id === batch.company.id)
+                .map((item) => (
+                  <option key={item.id} value={item.id}>{item.code} · {item.name}</option>
+                ))}
+            </select>
           </label>
           <label>Unit
-            <select value={form.unitId} onChange={(event) => changeUnit(event.target.value)}>
-              <option value="">— Select an existing unit —</option>
+            <select value={form.unitId} onChange={(event) => changeUnit(event.target.value)} disabled={!form.siteId}>
+              <option value="">{form.siteId ? '— Select an existing unit —' : '— Select a site first —'}</option>
               {units.map((unit) => (
                 <option key={unit.id} value={unit.id}>
                   {unit.code} · {unit.name} · {unit.status}
@@ -500,11 +519,18 @@ export default function ContractForm({
         {selectedUnit ? (
           <div className="hint ok">
             <b>{selectedUnit.code}</b> · {selectedUnit.name}
+            {site ? ` · ${site.name}` : ''}
             {building ? ` · ${building.name}` : ''} · {selectedUnit.unit_type} · {selectedUnit.status}
             {selectedUnit.buyer_name ? ` · buyer ${selectedUnit.buyer_name}` : ''}
           </div>
+        ) : !form.siteId ? (
+          <p className="hint warning">Select a site first, then choose an existing unit.</p>
         ) : (
-          <p className="hint warning">Select an existing unit. New units cannot be created here.</p>
+          <p className="hint warning">
+            {units.length
+              ? `Select an existing unit from ${site?.name || 'this site'}. New units cannot be created here.`
+              : `No available units at ${site?.name || 'this site'}. Contact the administrator; units cannot be created here.`}
+          </p>
         )}
       </section>
 

@@ -108,10 +108,12 @@ instead of creating a second one.
 
 ### Step 2 — Unit
 
-- **Site** — fixed to the UDOWE site; you cannot change it on this page.
-- **Unit** — select an **existing** unit.
+- **Site** — select the site from the company’s sites. The unit list follows the
+  selected site.
+- **Unit** — select an **existing** unit at that site.
   - Only available units are listed, plus the unit already on the contract.
-  - The selected unit shows its code, name, building, type and status.
+  - Units from all buildings on the site are shown.
+  - The selected unit shows its code, name, site, building, type and status.
 - **New units cannot be created here.** If the unit is missing, contact the
   administrator.
 
