@@ -86,7 +86,9 @@ Click **New contract**.
 
 ### Step 1 — Contact
 
-- **Contact** — select an existing contact, or choose **— Add a new contact —**.
+- **Contact** — select an existing contact from the list.
+- Click **New contact** to clear the selection and enter a new contact. The
+  button is enabled only when an existing contact is selected.
 - If you add a new contact, enter:
   - **Name** (required);
   - **Phone**;
@@ -98,6 +100,8 @@ Click **New contract**.
 
 A new contact is created **when the contract is committed**. Only the contact is
 new; units, buildings, taxes and prices come from the existing Odoo records.
+After the first contract is committed, the contact appears in the contact list
+for the next contract.
 
 If the name and phone match an existing contact, Odoo may reuse that contact
 instead of creating a second one.
@@ -119,12 +123,18 @@ instead of creating a second one.
 - **VAT** — normally `VAT 18% (sales)`.
 - **Agreement date** — the date on the agreement.
 - **Down payment (gross)** — the amount received.
-- **Down payment date** — the date received.
+- **Down payment date** — the date received. It defaults to **1 Jan 2026**;
+  change it if the deposit was received on another date. Previously committed
+  contracts keep their own date.
 - **Down payment received** — tick if received.
 - **Payment method** — bank/cash/mobile/cheque.
 - **Remaining installments** — the number of **future** monthly installments,
-  not the total term.
-- **First installment date** — the next due date.
+  not the total term. For a 6-month plan with 2 months already listed below,
+  enter **4**.
+- **First installment date** — the next due date. Use **Use month after last
+  paid** to set it to the month following the latest paid line.
+- The form shows the **total term**, e.g. `6 months = 2 listed + 4 remaining`.
+  The remaining months are split equally and invoiced by one subscription.
 
 All amounts are in **TZS**. USD contracts are not supported in this form.
 
@@ -136,8 +146,10 @@ For each one:
 
 - **Due date** — the contractual due date.
 - **Amount (gross)** — the amount on the agreement.
-- **Paid** — tick if received.
-- **Paid date** — the date received.
+- **Paid** — tick if received. New lines are ticked by default, which creates
+  an invoice **and** a payment. Untick it if the client has not paid, so only
+  an invoice is created.
+- **Paid date** — the date received. Leave it blank to use the due date.
 - **Method** — how it was received.
 - **Reference** — receipt/EFT number if available.
 
@@ -194,14 +206,18 @@ numbers. Check them against the agreement. The contract state becomes
 | Field | Rule |
 |---|---|
 | Contract reference | Unique; keep it stable; never reuse. |
-| Contact | Use the legal name; add email/phone for the Client App. |
+| Contact | Select an existing contact or click **New contact**; use the legal name; add email/phone for the Client App. A new contact is saved on commit. |
 | Unit | Existing unit only; one contract per unit. |
 | Contract price | Gross TZS amount from the agreement. |
 | VAT | Tick “includes VAT” for the usual agreed price. |
 | Down payment | Actual amount received, not always exactly 40%. |
-| Remaining installments | Future count only. |
+| Down payment date | Defaults to 1 Jan 2026; change it per contract if needed. |
+| Remaining installments | Future count only; total term minus months already listed. |
+| Total term | Listed installments + remaining installments; the form shows the sum. |
+| First installment date | Month after the last paid installment; the helper button fills it. |
 | Schedule table | Only installments already due (paid or overdue). |
-| Paid date | Actual receipt date, not the due date if different. |
+| Paid | Ticked by default → invoice + payment; untick for an unpaid invoice only. |
+| Paid date | Actual receipt date; blank uses the due date. |
 | Currency | TZS only. Hold USD contracts. |
 
 ---
@@ -288,3 +304,14 @@ A completed UDOWE example:
 | First installment date | 30 Jan 2027 |
 | Installments already due | 15,000,000 on 31 Aug 2026, paid by bank |
 | Result | Balance 90,000,000; 6 × 15,000,000 |
+
+### Six-month plan with two months already paid
+
+| Field | Value |
+|---|---|
+| Total term | 6 months |
+| Already paid | Aug 2026 and Sep 2026 → 2 schedule lines, **Paid** ticked |
+| Remaining installments | 4 (**not** 6) |
+| First installment date | Oct 2026 — use **Use month after last paid** |
+| Down payment date | 1 Jan 2026, or the date actually received |
+| Result | 2 posted invoices + 2 payments; one subscription for Oct 2026 – Jan 2027 |

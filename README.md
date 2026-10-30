@@ -15,6 +15,7 @@ cp .env.example .env
 # edit .env:
 # VITE_ODOO_URL=https://your-odoo.example.com
 # VITE_BATCH_NAME=Backfill
+# VITE_DEPOSIT_DATE=2026-01-01
 npm install
 npm run dev
 ```
@@ -26,13 +27,19 @@ For the local Docker Odoo, set `VITE_ODOO_URL=http://127.0.0.1:8069` in `.env`
 (or `.env.local`) and sign in with a local test user such as
 `it_lead@mkuyu.test` / `mkuyu-test`.
 
-Both variables are **required**:
+`VITE_ODOO_URL` and `VITE_BATCH_NAME` are **required**:
 
 - `VITE_ODOO_URL` — the Odoo base URL, no trailing slash.
 - `VITE_BATCH_NAME` — the contract list to open after login (default
   `Backfill`). The fallback matches a list starting with `Backfill`, then any
   name containing `UDOWE existing contracts`, so an existing UDOWE list still
   opens.
+
+`VITE_DEPOSIT_DATE` is optional:
+
+- `VITE_DEPOSIT_DATE` — default date for a new down payment (default
+  `2026-01-01`). The date stays editable per contract; committed contracts keep
+  the date they were posted with.
 
 If `VITE_ODOO_URL` is missing, the app shows a configuration screen instead of
 the login form.
@@ -43,7 +50,8 @@ See **[docs/DEPLOY_VERCEL.md](docs/DEPLOY_VERCEL.md)**. Short version:
 
 1. Push the branch.
 2. Vercel → New Project → import the repo (framework Vite).
-3. Set `VITE_ODOO_URL` and `VITE_BATCH_NAME` for Production and Preview.
+3. Set `VITE_ODOO_URL`, `VITE_BATCH_NAME` and (optionally) `VITE_DEPOSIT_DATE`
+   for Production and Preview.
 4. Deploy.
 
 `vercel.json` sets the build command, `dist` output and SPA rewrite.
@@ -59,10 +67,15 @@ contact, selecting an existing unit, validation, commit and common messages.
 1. After login, opens the assigned contract list directly.
 2. Filters the list by **building** and **unit**.
 3. **New contract**:
-   - select an existing contact or add a new contact;
+   - select an existing contact or click **New contact** to enter one (the
+     contact is created on commit);
    - select an **existing** unit (no unit creation);
    - enter the contract price, VAT, down payment and remaining installments;
-   - list the installments already due (paid or overdue).
+   - the down payment date defaults to `VITE_DEPOSIT_DATE` (1 Jan 2026) and
+     stays editable;
+   - list the installments already due (paid by default → invoice + payment);
+   - the form shows the total term (`listed + remaining`) and a **Use month
+     after last paid** helper for the first future installment.
 4. **Save & validate** stores the draft and shows Odoo’s validation and
    computed amounts.
 5. **Commit to Odoo** asks for confirmation, then creates the contact (if new),
@@ -91,6 +104,12 @@ administrator.
   requires updating the variable and redeploying.
 - The contract reference must be unique per company; it is the idempotency key.
 - The remaining balance is split equally over the remaining installments.
+- Past installments (Paid ticked) create a posted invoice **and** a payment;
+  unticked they create an invoice only. Future installments are handled by one
+  subscription, not by the schedule table.
+- **New contact** is UI-only: it switches the form to the new-contact fields.
+  The contact is created by the API when the contract is committed; there is no
+  standalone contact endpoint yet.
 - The API re-validates everything; the form preview is only a guide.
 - Tokens are stored in `localStorage`; the access token is refreshed
   automatically.

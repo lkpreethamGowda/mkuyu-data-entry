@@ -17,6 +17,13 @@ export function addMonths(iso: string, months: number): string {
   return toIso(date)
 }
 
+export function nextMonth(iso: string): string {
+  if (!iso) return ''
+  const [year, month, day] = iso.split('-').map(Number)
+  const lastDay = new Date(year, month + 1, 0).getDate()
+  return toIso(new Date(year, month, Math.min(day, lastDay)))
+}
+
 export function money(value: number | null | undefined, currency = 'TZS'): string {
   const amount = Number(value || 0)
   return `${currency} ${amount.toLocaleString('en-US', { maximumFractionDigits: 2 })}`

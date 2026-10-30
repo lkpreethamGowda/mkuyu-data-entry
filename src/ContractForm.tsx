@@ -7,9 +7,11 @@ import type {
   ScheduleLine,
 } from './types'
 import { addContract, commitContract, updateContract } from './api'
-import { addMonths, money, today } from './format'
+import { addMonths, money, nextMonth, today } from './format'
 
 type Busy = 'save' | 'commit' | null
+
+const DEFAULT_DEPOSIT_DATE = import.meta.env.VITE_DEPOSIT_DATE || '2026-01-01'
 
 interface FormState {
   externalRef: string
@@ -64,7 +66,7 @@ function initialForm(batch: Batch, lookups: Lookups, contract: Contract | null):
       taxId: firstTax?.id || '',
       agreementDate: start,
       downPayment: 0,
-      downPaymentDate: start,
+      downPaymentDate: DEFAULT_DEPOSIT_DATE,
       downPaymentPaid: true,
       downPaymentMethod: 'bank',
       installmentCount: 0,
@@ -166,6 +168,14 @@ export default function ContractForm({
   const installmentNet = form.installmentCount > 0 ? remainingNet / form.installmentCount : 0
   const installmentGross = form.priceIncludesVat && rate ? installmentNet * (1 + rate) : installmentNet
 
+  const listedCount = form.schedule.length
+  const remainingCount = Number(form.installmentCount) || 0
+  const totalTerm = listedCount + remainingCount
+  const lastPaidDate = form.schedule.reduce(
+    (latest, line) => (line.paid && line.due_date && line.due_date > latest ? line.due_date : latest),
+    '',
+  )
+
   const warnings = useMemo(() => {
     const list: string[] = []
     if (!form.externalRef.trim()) list.push('Contract reference is required.')
@@ -250,8 +260,8 @@ export default function ContractForm({
           sequence: current.schedule.length + 1,
           due_date: today(),
           amount: 0,
-          paid: false,
-          paid_date: today(),
+          paid: true,
+          paid_date: '',
           method: 'bank',
           reference: '',
         },
@@ -264,6 +274,11 @@ export default function ContractForm({
       ...current,
       schedule: current.schedule.filter((_, position) => position !== index),
     }))
+  }
+
+  function useMonthAfterLastPaid() {
+    if (!lastPaidDate) return
+    setForm((current) => ({ ...current, firstInstallmentDate: nextMonth(lastPaidDate) }))
   }
 
   function payload(): ContractPayload {
@@ -403,11 +418,22 @@ export default function ContractForm({
 
       <fieldset className="form-fields" disabled={committed}>
       <section className="card">
-        <h3>1. Contact</h3>
+        <div className="section-head">
+          <h3>1. Contact</h3>
+          <button
+            className="btn small"
+            type="button"
+            onClick={() => changePartner('')}
+            disabled={committed || !form.partnerId}
+            title={form.partnerId ? 'Clear the existing contact and enter a new one' : 'A new contact is already being entered'}
+          >
+            New contact
+          </button>
+        </div>
         <div className="grid two">
           <label>Contact
             <select value={form.partnerId} onChange={(event) => changePartner(event.target.value)}>
-              <option value="">— Add a new contact —</option>
+              <option value="">— New contact —</option>
               {partnerOptions.map((partner) => (
                 <option key={partner.id} value={partner.id}>
                   {partner.name}{partner.phone ? ` · ${partner.phone}` : ''}
@@ -428,7 +454,9 @@ export default function ContractForm({
         ) : (
           <>
             <p className="muted small">
-              A new contact is created when this contract is committed. Units, buildings, taxes and prices come from existing records.
+              Entering a new contact. Select an existing contact above, or click <b>New contact</b> to clear these
+              fields. The contact is created when this contract is committed; units, buildings, taxes and prices come
+              from existing records.
             </p>
             <div className="grid two">
               <label>Name
@@ -507,6 +535,7 @@ export default function ContractForm({
           </label>
           <label>Down payment date
             <input type="date" value={form.downPaymentDate} onChange={(event) => set('downPaymentDate', event.target.value)} />
+            <span className="muted small">New contracts default to {DEFAULT_DEPOSIT_DATE}; change it if the deposit was received on another date.</span>
           </label>
           <label className="checkbox">
             <input type="checkbox" checked={form.downPaymentPaid} onChange={(event) => set('downPaymentPaid', event.target.checked)} />
@@ -519,11 +548,29 @@ export default function ContractForm({
           </label>
           <label>Remaining installments
             <input type="number" min={0} max={36} value={form.installmentCount || ''} onChange={(event) => set('installmentCount', Number(event.target.value) || 0)} />
+            <span className="muted small">
+              Months still to pay, not the total term. For a 6-month plan with 2 months already listed, enter 4.
+            </span>
           </label>
           <label>First installment date
             <input type="date" value={form.firstInstallmentDate} onChange={(event) => set('firstInstallmentDate', event.target.value)} />
+            <button
+              className="link small"
+              type="button"
+              onClick={useMonthAfterLastPaid}
+              disabled={!lastPaidDate}
+              title={lastPaidDate ? `Next month after ${lastPaidDate}` : 'Add a paid installment first'}
+            >
+              {lastPaidDate ? `Use month after last paid (${nextMonth(lastPaidDate)})` : 'Use month after last paid'}
+            </button>
           </label>
         </div>
+        {totalTerm > 0 ? (
+          <p className="hint info">
+            Total term: <b>{totalTerm} month{totalTerm === 1 ? '' : 's'}</b> = {listedCount} listed +{' '}
+            {remainingCount} remaining. The remaining months are split equally and invoiced by one subscription.
+          </p>
+        ) : null}
         <p className="muted small">All amounts are in TZS. USD contracts are not supported in this form.</p>
       </section>
 
@@ -533,8 +580,10 @@ export default function ContractForm({
           <button className="btn small" onClick={addLine} type="button">Add installment</button>
         </div>
         <p className="muted">
-          Add only the installments that are due now (paid or overdue). The remaining balance is split equally over the
-          “remaining installments” above and invoiced by the subscription.
+          Add only the installments that are due now (paid or overdue). New lines are marked <b>Paid</b> by default,
+          which creates an invoice and a payment; untick it if the client has not paid. A blank paid date uses the due
+          date. The remaining balance is split equally over the “remaining installments” above and invoiced by the
+          subscription.
         </p>
         <table className="table">
           <thead>
@@ -578,7 +627,10 @@ export default function ContractForm({
         </div>
         <p className="muted">
           {selectedUnit ? `${selectedUnit.code} · ${selectedUnit.name}` : 'No unit selected'} ·{' '}
-          {form.installmentCount} remaining installment(s) · first {form.firstInstallmentDate || '—'}
+          {totalTerm > 0
+            ? `total term ${totalTerm} month${totalTerm === 1 ? '' : 's'} (${listedCount} listed + ${remainingCount} remaining)`
+            : `${remainingCount} remaining installment(s)`}{' '}
+          · first {form.firstInstallmentDate || '—'}
         </p>
       </section>
 

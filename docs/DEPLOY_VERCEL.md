@@ -64,6 +64,7 @@ Never commit `.env` or a real password.
    |---|---|---|
    | `VITE_ODOO_URL` | `https://your-odoo.example.com` | Production and Preview |
    | `VITE_BATCH_NAME` | `Backfill` | Production and Preview |
+   | `VITE_DEPOSIT_DATE` | `2026-01-01` (optional) | Production and Preview |
 
    - No trailing slash in the URL.
    - Use the exact Odoo base URL, including `https://`.
@@ -73,10 +74,12 @@ Never commit `.env` or a real password.
      Default `Backfill`; the code also falls back to a list starting with
      `Backfill`, then to any name containing `UDOWE existing contracts`, so an
      existing UDOWE deployment still opens.
+   - `VITE_DEPOSIT_DATE` is the default date for a new down payment. It stays
+     editable per contract; leave it unset to use `2026-01-01`.
 
 8. Click **Deploy**.
 
-Both variables are embedded at **build time**. Changing either requires a
+These variables are embedded at **build time**. Changing any of them requires a
 redeploy, not just saving the variable.
 
 ---

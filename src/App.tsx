@@ -117,7 +117,14 @@ export default function App() {
 
   async function handleCommitted(saved: Contract) {
     setContract(saved)
-    await reloadBatch()
+    if (!batch) return
+    try {
+      const [loadedLookups, loadedBatch] = await Promise.all([getLookups(), getBatch(batch.id)])
+      setLookups(loadedLookups)
+      setBatch(loadedBatch)
+    } catch (exception) {
+      setError((exception as Error).message)
+    }
   }
 
   async function handleCommitBatch() {
