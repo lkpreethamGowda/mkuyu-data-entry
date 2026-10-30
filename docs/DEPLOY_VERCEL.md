@@ -11,7 +11,7 @@ The app is a Vite + React single-page app. It talks directly to the Odoo
 
 - The UI repo (`mkuyu-legacy-import-ui`) pushed to a Git branch.
 - A Vercel account with access to that repository.
-- The Odoo URL, e.g. `https://mkuyu-operations-staging-40837267.dev.odoo.com`.
+- The Odoo URL, e.g. `https://your-odoo.example.com`.
 - The `mkuyu_cdl_legacy_import` module installed on that Odoo database.
 - An Odoo staff user in an import group:
   - IT Lead, CFO, CDL Finance Head, CDL Sales Admin, or Settings.

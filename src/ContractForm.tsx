@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import type {
   Batch,
   Contract,
@@ -41,7 +41,6 @@ interface FormState {
 }
 
 function initialForm(batch: Batch, lookups: Lookups, contract: Contract | null): FormState {
-  const firstTax = lookups.taxes.find((tax) => tax.company_id === batch.company.id) || lookups.taxes[0]
   const start = today()
   const batchSiteId = batch.contracts?.[0]?.unit.site_id || ''
   const fallbackSite = lookups.sites.find((item) => item.company_id === batch.company.id)
@@ -62,7 +61,7 @@ function initialForm(batch: Batch, lookups: Lookups, contract: Contract | null):
       unitType: 'apartment',
       contractPrice: 0,
       priceIncludesVat: true,
-      taxId: firstTax?.id || '',
+      taxId: '',
       agreementDate: start,
       downPayment: 0,
       downPaymentDate: DEFAULT_DEPOSIT_DATE,
@@ -89,7 +88,7 @@ function initialForm(batch: Batch, lookups: Lookups, contract: Contract | null):
     unitType: contract.unit.unit_type || 'apartment',
     contractPrice: contract.amounts.contract_gross,
     priceIncludesVat: contract.agreement.price_includes_vat ?? true,
-    taxId: contract.agreement.tax_id || firstTax?.id || '',
+    taxId: contract.agreement.tax_id || '',
     agreementDate: contract.agreement.date || start,
     downPayment: contract.agreement.down_payment,
     downPaymentDate: contract.agreement.down_payment_date || start,
@@ -121,6 +120,8 @@ export default function ContractForm({
   const [server, setServer] = useState<Contract | null>(contract)
   const [busy, setBusy] = useState<Busy>(null)
   const [error, setError] = useState('')
+  const [refAttempted, setRefAttempted] = useState(false)
+  const externalRefInput = useRef<HTMLInputElement>(null)
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((current) => ({ ...current, [key]: value }))
@@ -178,7 +179,9 @@ export default function ContractForm({
 
   const warnings = useMemo(() => {
     const list: string[] = []
-    if (!form.externalRef.trim()) list.push('Contract reference is required.')
+    if (!form.externalRef.trim()) {
+      list.push('Contract reference is missing. Enter the reference from the signed agreement (for example U0201-PREETHAAM); it must be unique.')
+    }
     if (!form.partnerId && !form.partnerName.trim()) list.push('Select a client or enter the client name.')
     if (!form.siteId) list.push('Select a site.')
     if (!form.unitId) list.push('Select an existing unit.')
@@ -212,6 +215,7 @@ export default function ContractForm({
   }, [form, remainingNet, scheduleGross, effectiveDownPayment])
 
   const committed = server?.state === 'committed' || contract?.state === 'committed'
+  const showRefError = refAttempted && !form.externalRef.trim()
 
   function changePartner(value: string) {
     if (!value) {
@@ -340,6 +344,12 @@ export default function ContractForm({
   }
 
   async function save(): Promise<Contract | null> {
+    if (!form.externalRef.trim()) {
+      setRefAttempted(true)
+      externalRefInput.current?.focus()
+      externalRefInput.current?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+      return null
+    }
     setBusy('save')
     setError('')
     try {
@@ -454,7 +464,21 @@ export default function ContractForm({
             </select>
           </label>
           <label>Contract reference
-            <input value={form.externalRef} onChange={(event) => set('externalRef', event.target.value)} placeholder="UDOWE-201-MOHAMED" />
+            <input
+              ref={externalRefInput}
+              className={showRefError ? 'input-invalid' : undefined}
+              aria-invalid={showRefError}
+              value={form.externalRef}
+              onChange={(event) => {
+                const value = event.target.value
+                set('externalRef', value)
+                if (value.trim()) setRefAttempted(false)
+              }}
+              placeholder="UDOWE-201-MOHAMED"
+            />
+            {showRefError ? (
+              <span className="field-error">Enter the contract reference before saving.</span>
+            ) : null}
           </label>
         </div>
         {form.partnerId ? (
@@ -670,12 +694,12 @@ export default function ContractForm({
         <section className="card">
           <h3>Committed</h3>
           <div className="grid two">
-            <div><span className="label">Client</span><b>{server.result.partner_id}</b></div>
-            <div><span className="label">Unit</span><b>{server.result.unit_id}</b></div>
-            <div><span className="label">Down payment order</span><b>{server.result.order_name || '—'}</b></div>
-            <div><span className="label">Subscription</span><b>{server.result.subscription_name || '—'}</b></div>
-            <div><span className="label">Invoices</span><b>{server.result.invoice_names.join(', ') || '—'}</b></div>
-            <div><span className="label">Payments</span><b>{server.result.payment_names.join(', ') || '—'}</b></div>
+            <div className="result-line"><span className="label">Client</span><b>{server.result.partner_id}</b></div>
+            <div className="result-line"><span className="label">Unit</span><b>{server.result.unit_id}</b></div>
+            <div className="result-line"><span className="label">Down payment order</span><b>{server.result.order_name || '—'}</b></div>
+            <div className="result-line"><span className="label">Subscription</span><b>{server.result.subscription_name || '—'}</b></div>
+            <div className="result-line"><span className="label">Invoices</span><b>{server.result.invoice_names.join(', ') || '—'}</b></div>
+            <div className="result-line"><span className="label">Payments</span><b>{server.result.payment_names.join(', ') || '—'}</b></div>
           </div>
         </section>
       ) : null}

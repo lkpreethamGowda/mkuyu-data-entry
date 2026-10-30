@@ -125,7 +125,8 @@ instead of creating a second one.
 - **Per Agreement price** — the gross figure on the signed agreement.
 - **The price includes VAT** — tick if the agreed figure already includes VAT
   (the usual case). Untick only if VAT is added on top.
-- **VAT** — normally `VAT 18% (sales)`.
+- **VAT** — starts at **— No VAT —**. Leave it there when the agreement has no
+  VAT, or select the tax shown on the agreement, normally `VAT 18% (sales)`.
 - **Agreement date** — the date on the agreement.
 - **Down payment (gross)** — the amount received.
 - **Down payment date** — the date received. It defaults to **1 Jan 2026**;
@@ -220,7 +221,7 @@ numbers. Check them against the agreement. The contract state becomes
 | Contact | Select an existing contact or click **New contact**; use the legal name; add email/phone for the Client App. A new contact is saved on commit. |
 | Unit | Existing unit only; one contract per unit. |
 | Per Agreement price | Gross TZS amount on the signed agreement. |
-| VAT | Tick “includes VAT” for the usual agreed price. |
+| VAT | Starts as “No VAT”; select the tax from the agreement, or leave it empty when there is none. Tick “includes VAT” when the agreed price already contains it. |
 | Down payment | Actual amount received, not always exactly 40%. |
 | Down payment date | Defaults to 1 Jan 2026; change it per contract if needed. |
 | Remaining installments | Future count only; total term minus months already listed. |
