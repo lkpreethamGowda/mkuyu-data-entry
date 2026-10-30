@@ -41,7 +41,6 @@ interface FormState {
 }
 
 function initialForm(batch: Batch, lookups: Lookups, contract: Contract | null): FormState {
-  const firstTax = lookups.taxes.find((tax) => tax.company_id === batch.company.id) || lookups.taxes[0]
   const start = today()
   const batchSiteId = batch.contracts?.[0]?.unit.site_id || ''
   const fallbackSite = lookups.sites.find((item) => item.company_id === batch.company.id)
@@ -62,7 +61,7 @@ function initialForm(batch: Batch, lookups: Lookups, contract: Contract | null):
       unitType: 'apartment',
       contractPrice: 0,
       priceIncludesVat: true,
-      taxId: firstTax?.id || '',
+      taxId: '',
       agreementDate: start,
       downPayment: 0,
       downPaymentDate: DEFAULT_DEPOSIT_DATE,
@@ -89,7 +88,7 @@ function initialForm(batch: Batch, lookups: Lookups, contract: Contract | null):
     unitType: contract.unit.unit_type || 'apartment',
     contractPrice: contract.amounts.contract_gross,
     priceIncludesVat: contract.agreement.price_includes_vat ?? true,
-    taxId: contract.agreement.tax_id || firstTax?.id || '',
+    taxId: contract.agreement.tax_id || '',
     agreementDate: contract.agreement.date || start,
     downPayment: contract.agreement.down_payment,
     downPaymentDate: contract.agreement.down_payment_date || start,
