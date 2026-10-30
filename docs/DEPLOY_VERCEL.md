@@ -58,20 +58,28 @@ Never commit `.env` or a real password.
 4. Framework preset: **Vite** (auto-detected).
 5. Build command: `npm run build`.
 6. Output directory: `dist`.
-7. Add the environment variable:
+7. Add the environment variables:
 
    | Name | Value | Environments |
    |---|---|---|
    | `VITE_ODOO_URL` | `https://your-odoo.example.com` | Production and Preview |
+   | `VITE_BATCH_NAME` | `Backfill` | Production and Preview |
+   | `VITE_DEPOSIT_DATE` | `2026-01-01` (optional) | Production and Preview |
 
-   - No trailing slash.
+   - No trailing slash in the URL.
    - Use the exact Odoo base URL, including `https://`.
    - For staging first: the staging URL.
    - For production later: the production URL; this requires a new deployment.
+   - `VITE_BATCH_NAME` is the existing contract list the page opens after login.
+     Default `Backfill`; the code also falls back to a list starting with
+     `Backfill`, then to any name containing `UDOWE existing contracts`, so an
+     existing UDOWE deployment still opens.
+   - `VITE_DEPOSIT_DATE` is the default date for a new down payment. It stays
+     editable per contract; leave it unset to use `2026-01-01`.
 
 8. Click **Deploy**.
 
-Vite embeds `VITE_ODOO_URL` at **build time**. Changing it later requires a
+These variables are embedded at **build time**. Changing any of them requires a
 redeploy, not just saving the variable.
 
 ---
@@ -82,14 +90,19 @@ Open the Vercel URL and check:
 
 1. The header shows a badge:
    - **STAGING** for a `.dev.odoo.com` / staging host;
-   - **PRODUCTION** for the live host.
+   - **PRODUCTION** for the live host;
+   - **LOCAL** for localhost.
 2. The login page shows the correct Odoo URL.
 3. Sign in with the client's Odoo user.
-4. The batch list loads.
-5. Create a batch and a draft contract; **do not commit** until the pilot.
-6. Save & validate; check the preview totals.
-7. Commit one pilot contract; verify the order/invoice/payment in Odoo.
-8. Log out.
+4. The page lands directly on the assigned contract list (default `Backfill`,
+   falling back to the existing UDOWE list), with no list selector or create
+   option.
+5. The building and unit filters work and show “Showing X of Y”.
+6. Create a draft contract; select an existing contact and an **existing unit**;
+   **do not commit** until the pilot.
+7. Save & validate; check the preview totals.
+8. Commit one pilot contract; verify the order/invoice/payment in Odoo.
+9. Log out.
 
 After the deployment, open `docs/CLIENT_USER_GUIDE.md` and fill in the
 **Access link** and **Support** fields before sending it to the client.
@@ -118,15 +131,18 @@ was not present at build time. Add it and redeploy.
 Create a **dedicated Odoo user for the client/project**. Do not give the client a
 general administrator account.
 
-The UI lists the batches visible to the Odoo company; batch-level ownership is
-not enforced by the UI. If several external clients share one Odoo database, do
-not give them the same deployment until batch/project-level access is added.
-For a single client/project, a dedicated user and a clear batch name are enough.
+The UI opens one assigned contract list (`VITE_BATCH_NAME`). It does not show a
+list selector or a create-list option. The API still returns the company's data,
+so this is a UI restriction, not hard access control. If several external
+clients share one Odoo database, do not give them the same deployment until
+API-level scoping is added. For a single client/project, a dedicated user and a
+clear list name are enough.
 
 The client guide explains:
 
-- use only the assigned batch;
-- do not open other batches;
+- use only the assigned contract list;
+- filter by building and unit;
+- add a contact through the contract, but select only existing units;
 - check the STAGING/PRODUCTION badge;
 - do not share the login.
 
@@ -171,6 +187,7 @@ Vercel → Project → Settings → Domains → add e.g.
 cd C:\Users\preet\Downloads\mkuyu-legacy-import-ui
 copy .env.example .env
 # edit .env: VITE_ODOO_URL=https://your-odoo.example.com
+#             VITE_BATCH_NAME=Backfill
 npm install
 npm run build
 npm run dev

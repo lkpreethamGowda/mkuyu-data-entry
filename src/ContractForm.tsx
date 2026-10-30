@@ -7,9 +7,11 @@ import type {
   ScheduleLine,
 } from './types'
 import { addContract, commitContract, updateContract } from './api'
-import { addMonths, money, parseFloor, sideLabel, today } from './format'
+import { addMonths, money, nextMonth, today } from './format'
 
 type Busy = 'save' | 'commit' | null
+
+const DEFAULT_DEPOSIT_DATE = import.meta.env.VITE_DEPOSIT_DATE || '2026-01-01'
 
 interface FormState {
   externalRef: string
@@ -23,12 +25,7 @@ interface FormState {
   buildingId: number | ''
   unitId: number | ''
   unitCode: string
-  floorText: string
-  floor: number | null
-  side: 'road' | 'back' | ''
   unitType: string
-  sizeSqm: number
-  createIfMissing: boolean
   contractPrice: number
   priceIncludesVat: boolean
   taxId: number | ''
@@ -46,6 +43,9 @@ interface FormState {
 function initialForm(batch: Batch, lookups: Lookups, contract: Contract | null): FormState {
   const firstTax = lookups.taxes.find((tax) => tax.company_id === batch.company.id) || lookups.taxes[0]
   const start = today()
+  const batchSiteId = batch.contracts?.[0]?.unit.site_id || ''
+  const fallbackSite = lookups.sites.find((item) => item.company_id === batch.company.id)
+  const defaultSiteId = batchSiteId || fallbackSite?.id || ''
   if (!contract) {
     return {
       externalRef: '',
@@ -55,22 +55,17 @@ function initialForm(batch: Batch, lookups: Lookups, contract: Contract | null):
       partnerEmail: '',
       nationalId: '',
       customerId: '',
-      siteId: '',
+      siteId: defaultSiteId,
       buildingId: '',
       unitId: '',
       unitCode: '',
-      floorText: '',
-      floor: null,
-      side: '',
       unitType: 'apartment',
-      sizeSqm: 0,
-      createIfMissing: false,
       contractPrice: 0,
       priceIncludesVat: true,
       taxId: firstTax?.id || '',
       agreementDate: start,
       downPayment: 0,
-      downPaymentDate: start,
+      downPaymentDate: DEFAULT_DEPOSIT_DATE,
       downPaymentPaid: true,
       downPaymentMethod: 'bank',
       installmentCount: 0,
@@ -87,16 +82,11 @@ function initialForm(batch: Batch, lookups: Lookups, contract: Contract | null):
     partnerEmail: contract.client.email,
     nationalId: contract.client.national_id,
     customerId: contract.client.customer_id,
-    siteId: contract.unit.site_id || '',
+    siteId: contract.unit.site_id || defaultSiteId,
     buildingId: contract.unit.building_id || '',
     unitId: contract.unit.unit_id || '',
     unitCode: contract.unit.unit_code,
-    floorText: contract.unit.floor ? `${contract.unit.floor} ${contract.unit.side || ''}`.trim() : '',
-    floor: contract.unit.floor,
-    side: (contract.unit.side as 'road' | 'back' | null) || '',
     unitType: contract.unit.unit_type || 'apartment',
-    sizeSqm: 0,
-    createIfMissing: false,
     contractPrice: contract.amounts.contract_gross,
     priceIncludesVat: contract.agreement.price_includes_vat ?? true,
     taxId: contract.agreement.tax_id || firstTax?.id || '',
@@ -152,10 +142,17 @@ export default function ContractForm({
   }, [lookups.partners, contract])
 
   const site = lookups.sites.find((item) => item.id === form.siteId)
-  const building =
-    lookups.buildings.find((item) => item.id === form.buildingId) ||
-    (site?.building_ids.length ? lookups.buildings.find((item) => item.id === site.building_ids[0].id) : undefined)
-  const units = lookups.units.filter((unit) => !form.siteId || unit.site_id === form.siteId)
+  const selectedUnit = lookups.units.find((unit) => unit.id === Number(form.unitId))
+  const building = lookups.buildings.find(
+    (item) => item.id === (selectedUnit?.building_id ?? form.buildingId),
+  )
+  const units = lookups.units.filter(
+    (unit) =>
+      unit.company_id === batch.company.id &&
+      !!form.siteId &&
+      unit.site_id === form.siteId &&
+      (unit.status === 'available' || unit.id === Number(form.unitId)),
+  )
   const tax = lookups.taxes.find((item) => item.id === form.taxId)
   const rate = (tax?.amount || 0) / 100
   const toNet = (gross: number) => (form.priceIncludesVat && rate ? gross / (1 + rate) : gross)
@@ -171,21 +168,23 @@ export default function ContractForm({
   const installmentNet = form.installmentCount > 0 ? remainingNet / form.installmentCount : 0
   const installmentGross = form.priceIncludesVat && rate ? installmentNet * (1 + rate) : installmentNet
 
-  const series = form.side === 'road' ? '01' : form.side === 'back' ? '02' : ''
-  const expectedCode =
-    building && form.floor && series
-      ? `${building.code}-U${String(form.floor).padStart(2, '0')}${series}`
-      : ''
-  const existingUnit = lookups.units.find((unit) => unit.code === expectedCode)
+  const listedCount = form.schedule.length
+  const remainingCount = Number(form.installmentCount) || 0
+  const totalTerm = listedCount + remainingCount
+  const lastPaidDate = form.schedule.reduce(
+    (latest, line) => (line.paid && line.due_date && line.due_date > latest ? line.due_date : latest),
+    '',
+  )
 
   const warnings = useMemo(() => {
     const list: string[] = []
     if (!form.externalRef.trim()) list.push('Contract reference is required.')
     if (!form.partnerId && !form.partnerName.trim()) list.push('Select a client or enter the client name.')
-    if (!form.unitId && !form.unitCode.trim() && !expectedCode) list.push('Select a unit, or enter floor and side.')
-    if (Number(form.contractPrice) <= 0) list.push('Contract price must be greater than zero.')
+    if (!form.siteId) list.push('Select a site.')
+    if (!form.unitId) list.push('Select an existing unit.')
+    if (Number(form.contractPrice) <= 0) list.push('Per Agreement price must be greater than zero.')
     if (effectiveDownPayment + scheduleGross > Number(form.contractPrice) + 0.01) {
-      list.push('Down payment plus the listed installments is more than the contract price.')
+      list.push('Down payment plus the listed installments is more than the Per Agreement price.')
     }
     if (remainingNet > 0.01 && form.installmentCount === 0) {
       list.push('There is a balance left; set the number of remaining installments.')
@@ -197,20 +196,20 @@ export default function ContractForm({
       list.push('A contract with listed installments needs a remaining installment count.')
     }
     if (form.installmentCount > 0 && !form.firstInstallmentDate) {
-      list.push('Set the first installment date.')
+      list.push('Set the Remaining Installment Start Date.')
     }
     if (form.installmentCount > 0 && effectiveDownPayment <= 0) {
       list.push('A down payment is required when there are installments.')
     }
     if (form.installmentCount > 0 && form.firstInstallmentDate) {
       const late = form.schedule.filter((line) => line.due_date && line.due_date >= form.firstInstallmentDate)
-      if (late.length) list.push('Some installments are on or after the first future installment date.')
+      if (late.length) list.push('Some previous installments are on or after the Remaining Installment Start Date.')
     }
     if (form.schedule.some((line) => Number(line.amount) <= 0)) {
       list.push('Every listed installment needs an amount greater than zero.')
     }
     return list
-  }, [form, expectedCode, remainingNet, scheduleGross, effectiveDownPayment])
+  }, [form, remainingNet, scheduleGross, effectiveDownPayment])
 
   const committed = server?.state === 'committed' || contract?.state === 'committed'
 
@@ -234,12 +233,10 @@ export default function ContractForm({
 
   function changeSite(value: string) {
     const id = value ? Number(value) : ''
-    const selected = lookups.sites.find((item) => item.id === id)
-    const firstBuilding = selected?.building_ids[0]
     setForm((current) => ({
       ...current,
       siteId: id,
-      buildingId: firstBuilding?.id || '',
+      buildingId: '',
       unitId: '',
       unitCode: '',
     }))
@@ -253,20 +250,9 @@ export default function ContractForm({
       unitId: id,
       unitCode: unit?.code || '',
       siteId: unit?.site_id || current.siteId,
-      buildingId: unit?.building_id || current.buildingId,
-      floor: unit?.floor ?? current.floor,
+      buildingId: unit?.building_id || '',
       unitType: unit?.unit_type || current.unitType,
       contractPrice: current.contractPrice || unit?.list_price || 0,
-    }))
-  }
-
-  function changeFloorText(value: string) {
-    const parsed = parseFloor(value)
-    setForm((current) => ({
-      ...current,
-      floorText: value,
-      floor: parsed.floor ?? current.floor,
-      side: (parsed.side as 'road' | 'back' | null) ?? current.side,
     }))
   }
 
@@ -286,8 +272,8 @@ export default function ContractForm({
           sequence: current.schedule.length + 1,
           due_date: today(),
           amount: 0,
-          paid: false,
-          paid_date: today(),
+          paid: true,
+          paid_date: '',
           method: 'bank',
           reference: '',
         },
@@ -300,6 +286,11 @@ export default function ContractForm({
       ...current,
       schedule: current.schedule.filter((_, position) => position !== index),
     }))
+  }
+
+  function useMonthAfterLastPaid() {
+    if (!lastPaidDate) return
+    setForm((current) => ({ ...current, firstInstallmentDate: nextMonth(lastPaidDate) }))
   }
 
   function payload(): ContractPayload {
@@ -320,15 +311,15 @@ export default function ContractForm({
         site_id: form.siteId ? Number(form.siteId) : null,
         site_code: site?.code || '',
         building_id: form.buildingId ? Number(form.buildingId) : null,
-        floor_text: form.floorText.trim(),
-        floor: form.floor,
-        side: form.side,
+        floor_text: '',
+        floor: null,
+        side: '',
         unit_type: form.unitType,
-        size_sqm: Number(form.sizeSqm) || 0,
+        size_sqm: 0,
         contract_price: Number(form.contractPrice) || 0,
         price_includes_vat: form.priceIncludesVat,
         tax_id: form.taxId ? Number(form.taxId) : null,
-        create_if_missing: form.createIfMissing,
+        create_if_missing: false,
       },
       agreement: {
         date: form.agreementDate,
@@ -399,10 +390,10 @@ export default function ContractForm({
     <div className="page">
       <div className="page-head">
         <div>
-          <button className="link" onClick={onBack}>← Back to {batch.name}</button>
-          <h2>{contract ? contract.external_ref : 'New legacy contract'}</h2>
+          <button className="link" onClick={onBack}>← Back to contracts</button>
+          <h2>{contract ? contract.external_ref : 'New contract'}</h2>
           <p className="muted">
-            Batch {batch.name} · {batch.company.name}
+            {batch.name} · {batch.company.name}
             {server ? <span className={`badge state-${server.state}`}>{server.state}</span> : null}
           </p>
         </div>
@@ -439,11 +430,22 @@ export default function ContractForm({
 
       <fieldset className="form-fields" disabled={committed}>
       <section className="card">
-        <h3>1. Client</h3>
+        <div className="section-head">
+          <h3>1. Contact</h3>
+          <button
+            className="btn small"
+            type="button"
+            onClick={() => changePartner('')}
+            disabled={committed || !form.partnerId}
+            title={form.partnerId ? 'Clear the existing contact and enter a new one' : 'A new contact is already being entered'}
+          >
+            New contact
+          </button>
+        </div>
         <div className="grid two">
-          <label>Existing client
+          <label>Contact
             <select value={form.partnerId} onChange={(event) => changePartner(event.target.value)}>
-              <option value="">— New client —</option>
+              <option value="">— New contact —</option>
               {partnerOptions.map((partner) => (
                 <option key={partner.id} value={partner.id}>
                   {partner.name}{partner.phone ? ` · ${partner.phone}` : ''}
@@ -454,22 +456,39 @@ export default function ContractForm({
           <label>Contract reference
             <input value={form.externalRef} onChange={(event) => set('externalRef', event.target.value)} placeholder="UDOWE-201-MOHAMED" />
           </label>
-          <label>Client name
-            <input value={form.partnerName} onChange={(event) => set('partnerName', event.target.value)} />
-          </label>
-          <label>Phone
-            <input value={form.partnerPhone} onChange={(event) => set('partnerPhone', event.target.value)} placeholder="255 713 961 740" />
-          </label>
-          <label>Email
-            <input value={form.partnerEmail} onChange={(event) => set('partnerEmail', event.target.value)} />
-          </label>
-          <label>National ID
-            <input value={form.nationalId} onChange={(event) => set('nationalId', event.target.value)} />
-          </label>
-          <label>Customer ID
-            <input value={form.customerId} onChange={(event) => set('customerId', event.target.value)} />
-          </label>
         </div>
+        {form.partnerId ? (
+          <p className="hint ok">
+            Using existing contact: <b>{form.partnerName}</b>
+            {form.partnerPhone ? ` · ${form.partnerPhone}` : ''}
+            {form.partnerEmail ? ` · ${form.partnerEmail}` : ''}
+          </p>
+        ) : (
+          <>
+            <p className="muted small">
+              Entering a new contact. Select an existing contact above, or click <b>New contact</b> to clear these
+              fields. The contact is created when this contract is committed; units, buildings, taxes and prices come
+              from existing records.
+            </p>
+            <div className="grid two">
+              <label>Name
+                <input value={form.partnerName} onChange={(event) => set('partnerName', event.target.value)} />
+              </label>
+              <label>Phone
+                <input value={form.partnerPhone} onChange={(event) => set('partnerPhone', event.target.value)} placeholder="255 713 961 740" />
+              </label>
+              <label>Email
+                <input value={form.partnerEmail} onChange={(event) => set('partnerEmail', event.target.value)} />
+              </label>
+              <label>National ID
+                <input value={form.nationalId} onChange={(event) => set('nationalId', event.target.value)} />
+              </label>
+              <label>Customer ID
+                <input value={form.customerId} onChange={(event) => set('customerId', event.target.value)} />
+              </label>
+            </div>
+          </>
+        )}
       </section>
 
       <section className="card">
@@ -477,74 +496,48 @@ export default function ContractForm({
         <div className="grid two">
           <label>Site
             <select value={form.siteId} onChange={(event) => changeSite(event.target.value)}>
-              <option value="">— Select site —</option>
-              {lookups.sites.filter((item) => item.company_id === batch.company.id).map((item) => (
-                <option key={item.id} value={item.id}>{item.code} · {item.name}</option>
-              ))}
+              <option value="">— Select a site —</option>
+              {lookups.sites
+                .filter((item) => item.company_id === batch.company.id)
+                .map((item) => (
+                  <option key={item.id} value={item.id}>{item.code} · {item.name}</option>
+                ))}
             </select>
           </label>
-          <label>Building
-            <select value={form.buildingId} onChange={(event) => set('buildingId', event.target.value ? Number(event.target.value) : '')}>
-              <option value="">— Select building —</option>
-              {lookups.buildings.filter((item) => !form.siteId || item.site_id === form.siteId).map((item) => (
-                <option key={item.id} value={item.id}>{item.code} · {item.name}</option>
-              ))}
-            </select>
-          </label>
-          <label>Existing unit
-            <select value={form.unitId} onChange={(event) => changeUnit(event.target.value)}>
-              <option value="">— Not selected —</option>
+          <label>Unit
+            <select value={form.unitId} onChange={(event) => changeUnit(event.target.value)} disabled={!form.siteId}>
+              <option value="">{form.siteId ? '— Select an existing unit —' : '— Select a site first —'}</option>
               {units.map((unit) => (
                 <option key={unit.id} value={unit.id}>
-                  {unit.code} · {unit.status}{unit.buyer_name ? ` · ${unit.buyer_name}` : ''}
+                  {unit.code} · {unit.name} · {unit.status}
+                  {unit.buyer_name ? ` · ${unit.buyer_name}` : ''}
                 </option>
               ))}
             </select>
           </label>
-          <label>Unit code (if known)
-            <input value={form.unitCode} onChange={(event) => set('unitCode', event.target.value)} placeholder="CDL-L06-UDOWE-B01-U0201" />
-          </label>
-          <label>Floor / side text
-            <input value={form.floorText} onChange={(event) => changeFloorText(event.target.value)} placeholder="2nd Road Side" />
-          </label>
-          <label>Floor
-            <input type="number" value={form.floor ?? ''} onChange={(event) => set('floor', event.target.value ? Number(event.target.value) : null)} />
-          </label>
-          <label>Side
-            <select value={form.side} onChange={(event) => set('side', event.target.value as 'road' | 'back' | '')}>
-              <option value="">— Select side —</option>
-              <option value="road">Road side (01 series)</option>
-              <option value="back">Back side (02 series)</option>
-            </select>
-          </label>
-          <label>Unit type
-            <select value={form.unitType} onChange={(event) => set('unitType', event.target.value)}>
-              <option value="apartment">Apartment</option>
-              <option value="shop">Shop</option>
-              <option value="office">Office</option>
-              <option value="plot">Plot</option>
-            </select>
-          </label>
-          <label>Size (sqm)
-            <input type="number" value={form.sizeSqm || ''} onChange={(event) => set('sizeSqm', Number(event.target.value) || 0)} />
-          </label>
-          <label className="checkbox">
-            <input type="checkbox" checked={form.createIfMissing} onChange={(event) => set('createIfMissing', event.target.checked)} />
-            Create the unit if it does not exist
-          </label>
         </div>
-        {expectedCode ? (
-          <p className={existingUnit ? 'hint ok' : 'hint warning'}>
-            Expected unit code: <b>{expectedCode}</b>{' '}
-            {existingUnit ? `— found (${existingUnit.status})` : form.createIfMissing ? '— will be created' : '— not found'}
+        {selectedUnit ? (
+          <div className="hint ok">
+            <b>{selectedUnit.code}</b> · {selectedUnit.name}
+            {site ? ` · ${site.name}` : ''}
+            {building ? ` · ${building.name}` : ''} · {selectedUnit.unit_type} · {selectedUnit.status}
+            {selectedUnit.buyer_name ? ` · buyer ${selectedUnit.buyer_name}` : ''}
+          </div>
+        ) : !form.siteId ? (
+          <p className="hint warning">Select a site first, then choose an existing unit.</p>
+        ) : (
+          <p className="hint warning">
+            {units.length
+              ? `Select an existing unit from ${site?.name || 'this site'}. New units cannot be created here.`
+              : `No available units at ${site?.name || 'this site'}. Contact the administrator; units cannot be created here.`}
           </p>
-        ) : null}
+        )}
       </section>
 
       <section className="card">
         <h3>3. Commercials</h3>
         <div className="grid two">
-          <label>Contract price (gross)
+          <label>Per Agreement price
             <input type="number" value={form.contractPrice || ''} onChange={(event) => set('contractPrice', Number(event.target.value) || 0)} />
           </label>
           <label className="checkbox">
@@ -568,6 +561,7 @@ export default function ContractForm({
           </label>
           <label>Down payment date
             <input type="date" value={form.downPaymentDate} onChange={(event) => set('downPaymentDate', event.target.value)} />
+            <span className="muted small">New contracts default to {DEFAULT_DEPOSIT_DATE}; change it if the deposit was received on another date.</span>
           </label>
           <label className="checkbox">
             <input type="checkbox" checked={form.downPaymentPaid} onChange={(event) => set('downPaymentPaid', event.target.checked)} />
@@ -578,24 +572,21 @@ export default function ContractForm({
               {lookups.methods.map((method) => <option key={method.value} value={method.value}>{method.label}</option>)}
             </select>
           </label>
-          <label>Remaining installments
-            <input type="number" min={0} max={36} value={form.installmentCount || ''} onChange={(event) => set('installmentCount', Number(event.target.value) || 0)} />
-          </label>
-          <label>First installment date
-            <input type="date" value={form.firstInstallmentDate} onChange={(event) => set('firstInstallmentDate', event.target.value)} />
-          </label>
         </div>
-        <p className="muted small">All amounts are in TZS. USD contracts are not supported in this form.</p>
       </section>
 
       <section className="card">
-        <div className="section-head">
-          <h3>4. Installments already due</h3>
+        <h3>4. Installments</h3>
+
+        <div className="subsection-head">
+          <h4>Previous Installments</h4>
           <button className="btn small" onClick={addLine} type="button">Add installment</button>
         </div>
         <p className="muted">
-          Add only the installments that are due now (paid or overdue). The remaining balance is split equally over the
-          “remaining installments” above and invoiced by the subscription.
+          Add only the installments that are due now (paid or overdue). New lines are marked <b>Paid</b> by default,
+          which creates an invoice and a payment; untick it if the client has not paid. A blank paid date uses the due
+          date. The remaining balance is split equally over the “remaining installments” below and invoiced by the
+          subscription.
         </p>
         <table className="table">
           <thead>
@@ -623,21 +614,56 @@ export default function ContractForm({
             {!form.schedule.length ? <tr><td colSpan={8} className="muted center">No installments listed.</td></tr> : null}
           </tbody>
         </table>
+
+        <h4>Remaining Installments</h4>
+        <div className="grid two">
+          <label>Remaining installments
+            <input type="number" min={0} max={36} value={form.installmentCount || ''} onChange={(event) => set('installmentCount', Number(event.target.value) || 0)} />
+            <span className="muted small">
+              Months still to pay, not the total term. For a 6-month plan with 2 months already listed, enter 4.
+            </span>
+          </label>
+          <label>Remaining Installment Start Date
+            <input type="date" value={form.firstInstallmentDate} onChange={(event) => set('firstInstallmentDate', event.target.value)} />
+            <button
+              className="link small"
+              type="button"
+              onClick={useMonthAfterLastPaid}
+              disabled={!lastPaidDate}
+              title={lastPaidDate ? `Next month after ${lastPaidDate}` : 'Add a paid installment first'}
+            >
+              {lastPaidDate ? `Use month after last paid (${nextMonth(lastPaidDate)})` : 'Use month after last paid'}
+            </button>
+          </label>
+        </div>
+        {totalTerm > 0 ? (
+          <p className="hint info">
+            Total term: <b>{totalTerm} month{totalTerm === 1 ? '' : 's'}</b> = {listedCount} listed +{' '}
+            {remainingCount} remaining. The remaining months are split equally and invoiced by one subscription.
+          </p>
+        ) : null}
+        <p className="muted small">All amounts are in TZS. USD contracts are not supported in this form.</p>
       </section>
 
       <section className="card totals">
         <h3>5. Preview</h3>
         <div className="grid four">
-          <div><span className="label">Contract (net)</span><b>{money(contractNet)}</b></div>
+          <div><span className="label">Per Agreement (net)</span><b>{money(contractNet)}</b></div>
           <div><span className="label">Down payment (net)</span><b>{money(downPaymentNet)}</b></div>
           <div><span className="label">Listed installments</span><b>{money(scheduleGross)}</b></div>
           <div><span className="label">Balance (net)</span><b>{money(remainingNet)}</b></div>
           <div><span className="label">Future installment (net)</span><b>{money(installmentNet)}</b></div>
           <div><span className="label">Future installment (gross)</span><b>{money(installmentGross)}</b></div>
           <div><span className="label">VAT rate</span><b>{(rate * 100).toFixed(0)}%</b></div>
-          <div><span className="label">Unit</span><b>{form.unitCode || expectedCode || '—'}</b></div>
+          <div><span className="label">Unit</span><b>{selectedUnit?.code || form.unitCode || '—'}</b></div>
         </div>
-        <p className="muted">Side: {sideLabel(form.side)} · {form.installmentCount} remaining installment(s) · first {form.firstInstallmentDate || '—'}</p>
+        <p className="muted">
+          {selectedUnit ? `${selectedUnit.code} · ${selectedUnit.name}` : 'No unit selected'} ·{' '}
+          {totalTerm > 0
+            ? `total term ${totalTerm} month${totalTerm === 1 ? '' : 's'} (${listedCount} listed + ${remainingCount} remaining)`
+            : `${remainingCount} remaining installment(s)`}{' '}
+          · remaining starts {form.firstInstallmentDate || '—'}
+        </p>
       </section>
 
       {server?.result && server.state === 'committed' ? (

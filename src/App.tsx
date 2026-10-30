@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react'
-import type { Batch, Contract, Lookups, SessionUser } from './types'
+import type { Batch, Building, Contract, Lookups, SessionUser } from './types'
 import {
   ApiError,
   clearSession,
   commitBatch,
-  createBatch,
   getBatch,
   getLookups,
   isConfigured,
@@ -16,16 +15,18 @@ import {
 import ContractForm from './ContractForm'
 import { money } from './format'
 
-type Screen = 'batches' | 'batch' | 'contract'
+type Screen = 'list' | 'contract'
+
+const BATCH_NAME = import.meta.env.VITE_BATCH_NAME || 'Backfill'
 
 export default function App() {
   const [user, setUser] = useState<SessionUser | null>(() => storedUser())
   const [booting, setBooting] = useState(true)
   const [lookups, setLookups] = useState<Lookups | null>(null)
-  const [batches, setBatches] = useState<Batch[]>([])
   const [batch, setBatch] = useState<Batch | null>(null)
   const [contract, setContract] = useState<Contract | null>(null)
-  const [screen, setScreen] = useState<Screen>('batches')
+  const [screen, setScreen] = useState<Screen>('list')
+  const [unavailable, setUnavailable] = useState(false)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -40,11 +41,28 @@ export default function App() {
         setBooting(false)
         return
       }
+      setBooting(true)
+      setUnavailable(false)
       try {
-        const [loadedLookups, loadedBatches] = await Promise.all([getLookups(), listBatches()])
+        const [loadedLookups, batches] = await Promise.all([getLookups(), listBatches()])
+        const target =
+          batches.find((item) => item.name === BATCH_NAME) ||
+          (BATCH_NAME === 'Backfill'
+            ? batches.find((item) => item.name.startsWith('Backfill')) ||
+              batches.find((item) => item.name.includes('UDOWE existing contracts'))
+            : null)
+        if (!target) {
+          if (!cancelled) {
+            setUnavailable(true)
+            setBooting(false)
+          }
+          return
+        }
+        const detail = await getBatch(target.id)
         if (cancelled) return
         setLookups(loadedLookups)
-        setBatches(loadedBatches)
+        setBatch(detail)
+        setScreen('list')
       } catch (exception) {
         if (cancelled) return
         if (exception instanceof ApiError && exception.status === 401) {
@@ -63,32 +81,11 @@ export default function App() {
     }
   }, [user])
 
-  async function refreshBatches() {
-    const loaded = await listBatches()
-    setBatches(loaded)
-    return loaded
-  }
-
-  async function reloadBatch(id: number) {
-    const loaded = await getBatch(id)
+  async function reloadBatch() {
+    if (!batch) return
+    const loaded = await getBatch(batch.id)
     setBatch(loaded)
-    setBatches((current) => current.map((item) => (item.id === loaded.id ? { ...item, ...loaded, contracts: undefined } : item)))
     return loaded
-  }
-
-  async function openBatch(id: number) {
-    setBusy(true)
-    setError('')
-    try {
-      const loaded = await getBatch(id)
-      setBatch(loaded)
-      setContract(null)
-      setScreen('batch')
-    } catch (exception) {
-      setError((exception as Error).message)
-    } finally {
-      setBusy(false)
-    }
   }
 
   function openContract(item: Contract) {
@@ -96,21 +93,39 @@ export default function App() {
     setScreen('contract')
   }
 
+  function newContract() {
+    setContract(null)
+    setScreen('contract')
+  }
+
   async function handleSaved(saved: Contract) {
     setContract(saved)
-    if (batch) await reloadBatch(batch.id)
+    await reloadBatch()
   }
 
   async function handleCommitted(saved: Contract) {
     setContract(saved)
-    if (batch) await reloadBatch(batch.id)
+    if (!batch) return
+    try {
+      const [loadedLookups, loadedBatch] = await Promise.all([getLookups(), getBatch(batch.id)])
+      setLookups(loadedLookups)
+      setBatch(loadedBatch)
+    } catch (exception) {
+      setError((exception as Error).message)
+    }
   }
 
   async function handleCommitBatch() {
     if (!batch) return
-    const count = (batch.contracts || []).filter((item) => item.state !== 'committed' && item.state !== 'cancelled').length
+    const count = (batch.contracts || []).filter(
+      (item) => item.state !== 'committed' && item.state !== 'cancelled',
+    ).length
     if (!count) return
-    if (!window.confirm(`Commit ${count} contract${count === 1 ? '' : 's'} to Odoo?\n\nThis creates the sale orders, invoices, payments and installment plans. It cannot be edited afterwards.`)) {
+    if (!window.confirm(
+      `Commit ${count} contract${count === 1 ? '' : 's'} to Odoo?\n\n` +
+      'This creates the sale orders, invoices, payments and installment plans. ' +
+      'It cannot be edited afterwards.',
+    )) {
       return
     }
     setBusy(true)
@@ -120,7 +135,10 @@ export default function App() {
       setBatch(result.batch)
       const failures = result.results.filter((item) => !item.ok)
       if (failures.length) {
-        setError(`Committed ${result.results.length - failures.length}, failed ${failures.length}. ${failures.map((item) => item.error).join(' · ')}`)
+        setError(
+          `Committed ${result.results.length - failures.length}, failed ${failures.length}. ` +
+          failures.map((item) => item.error).join(' · '),
+        )
       }
     } catch (exception) {
       setError((exception as Error).message)
@@ -133,10 +151,11 @@ export default function App() {
     clearSession()
     setUser(null)
     setLookups(null)
-    setBatches([])
     setBatch(null)
     setContract(null)
-    setScreen('batches')
+    setScreen('list')
+    setUnavailable(false)
+    setError('')
   }
 
   if (booting) {
@@ -151,6 +170,24 @@ export default function App() {
     return <LoginScreen onLogin={(session) => { setError(''); setUser(session) }} />
   }
 
+  if (unavailable) {
+    return <UnavailableScreen batchName={BATCH_NAME} onLogout={logout} />
+  }
+
+  if (!batch || !lookups) {
+    return (
+      <div className="login-wrap">
+        <div className="login-card">
+          <Brand big />
+          <h2>Could not load the contract list</h2>
+          <p className="muted">{error || 'Unknown error.'}</p>
+          <button className="btn primary block" onClick={() => window.location.reload()}>Retry</button>
+          <button className="btn block" onClick={logout}>Log out</button>
+        </div>
+      </div>
+    )
+  }
+
   const host = odooUrl().replace(/^https?:\/\//, '')
   const local = /^(localhost|127\.0\.0\.1)/i.test(host)
   const staging = /staging|\.dev\./i.test(host)
@@ -159,13 +196,7 @@ export default function App() {
   return (
     <div className="app">
       <header className="topbar">
-        <div className="brand">
-          <span className="brand-mark">M</span>
-          <div>
-            <strong>MKUYU</strong>
-            <span>Backlog contract entry</span>
-          </div>
-        </div>
+        <Brand />
         <div className="topbar-right">
           <span className={`env-chip ${local ? 'local' : staging ? 'staging' : 'live'}`} title={odooUrl()}>
             {environment} · {host}
@@ -178,50 +209,27 @@ export default function App() {
       <main className="main">
         {error ? <div className="alert error">{error}</div> : null}
 
-        {screen === 'batches' ? (
-          <BatchList
-            batches={batches}
-            busy={busy}
-            onOpen={openBatch}
-            onCreate={async (values) => {
-              setBusy(true)
-              setError('')
-              try {
-                const created = await createBatch(values)
-                await refreshBatches()
-                await openBatch(created.id)
-              } catch (exception) {
-                setError((exception as Error).message)
-              } finally {
-                setBusy(false)
-              }
-            }}
-          />
-        ) : null}
-
-        {screen === 'batch' && batch ? (
-          <BatchDetail
+        {screen === 'list' ? (
+          <ContractList
             batch={batch}
+            lookups={lookups}
             busy={busy}
-            onBack={() => { setScreen('batches'); setBatch(null); refreshBatches().catch(() => undefined) }}
-            onNew={() => { setContract(null); setScreen('contract') }}
+            onNew={newContract}
             onOpenContract={openContract}
             onCommitAll={handleCommitBatch}
           />
         ) : null}
 
-        {screen === 'contract' && batch && lookups ? (
+        {screen === 'contract' ? (
           <ContractForm
             batch={batch}
             lookups={lookups}
             contract={contract}
-            onBack={() => { setScreen('batch'); setContract(null) }}
+            onBack={() => { setScreen('list'); setContract(null) }}
             onSaved={handleSaved}
             onCommitted={handleCommitted}
           />
         ) : null}
-
-        {screen === 'contract' && !lookups ? <div className="boot">Loading reference data…</div> : null}
       </main>
 
       <footer className="footer">
@@ -232,23 +240,47 @@ export default function App() {
   )
 }
 
+function Brand({ big = false }: { big?: boolean }) {
+  return (
+    <div className={`brand${big ? ' big login-brand' : ''}`}>
+      <span className="brand-mark">
+        <img src="/mkuyu-logo.svg" alt="" />
+      </span>
+      <div>
+        <strong>MKUYU</strong>
+        <span>Backlog contract entry</span>
+      </div>
+    </div>
+  )
+}
+
 function ConfigScreen() {
   return (
     <div className="login-wrap">
       <div className="login-card">
-        <div className="brand big">
-          <span className="brand-mark">M</span>
-          <div>
-            <strong>MKUYU</strong>
-            <span>Backlog contract entry</span>
-          </div>
-        </div>
+        <Brand big />
         <h2>Odoo URL is not configured</h2>
         <p className="muted">
           This deployment is missing the <code>VITE_ODOO_URL</code> build variable.
           Set it in Vercel → Project → Settings → Environment Variables, then redeploy.
         </p>
         <pre className="config-example">VITE_ODOO_URL=https://your-odoo.example.com</pre>
+      </div>
+    </div>
+  )
+}
+
+function UnavailableScreen({ batchName, onLogout }: { batchName: string; onLogout: () => void }) {
+  return (
+    <div className="login-wrap">
+      <div className="login-card">
+        <Brand big />
+        <h2>Contract list not available</h2>
+        <p className="muted">
+          The assigned list <b>{batchName}</b> was not found. Contact MKUYU support; do not
+          create a new list.
+        </p>
+        <button className="btn block" onClick={onLogout}>Log out</button>
       </div>
     </div>
   )
@@ -277,14 +309,11 @@ function LoginScreen({ onLogin }: { onLogin: (user: SessionUser) => void }) {
   return (
     <div className="login-wrap">
       <form className="login-card" onSubmit={submit}>
-        <div className="brand big">
-          <span className="brand-mark">M</span>
-          <div>
-            <strong>MKUYU</strong>
-            <span>Legacy contract import</span>
-          </div>
-        </div>
-        <p className="muted">Sign in with the Odoo account provided by MKUYU. {odooUrl()}</p>
+        <Brand big />
+        <p className="muted">
+          Sign in with the Odoo account provided by MKUYU to enter existing/backlog contracts.
+        </p>
+        <p className="muted small">{odooUrl()}</p>
         <label>Email
           <input value={loginName} onChange={(event) => setLoginName(event.target.value)} autoComplete="username" />
         </label>
@@ -298,99 +327,71 @@ function LoginScreen({ onLogin }: { onLogin: (user: SessionUser) => void }) {
   )
 }
 
-function BatchList({
-  batches,
-  busy,
-  onOpen,
-  onCreate,
-}: {
-  batches: Batch[]
-  busy: boolean
-  onOpen: (id: number) => void
-  onCreate: (values: { name?: string; source?: string; notes?: string }) => void
-}) {
-  const [name, setName] = useState('')
-  const [source, setSource] = useState('')
-
-  return (
-    <div className="page">
-      <div className="page-head">
-        <div>
-          <h2>Contract batches</h2>
-          <p className="muted">
-            Use this only for existing/backlog contracts. New sales must use the normal Odoo
-            reservation and installment flow. Group one file/client, review each contract, then commit.
-          </p>
-        </div>
-      </div>
-
-      <section className="card">
-        <h3>New batch</h3>
-        <div className="grid three">
-          <label>Name
-            <input value={name} onChange={(event) => setName(event.target.value)} placeholder="UDOWE existing contracts" />
-          </label>
-          <label>Source
-            <input value={source} onChange={(event) => setSource(event.target.value)} placeholder="UDOWE PROJECT.xlsx" />
-          </label>
-          <div className="align-end">
-            <button className="btn primary" disabled={busy} onClick={() => onCreate({ name: name || undefined, source: source || undefined })}>
-              Create batch
-            </button>
-          </div>
-        </div>
-      </section>
-
-      <section className="card">
-        <h3>Batches</h3>
-        <table className="table">
-          <thead>
-            <tr><th>Batch</th><th>Source</th><th>Contracts</th><th>Committed</th><th>State</th><th>Created</th><th /></tr>
-          </thead>
-          <tbody>
-            {batches.map((item) => (
-              <tr key={item.id}>
-                <td><b>{item.name}</b><div className="muted small">{item.company.name}</div></td>
-                <td>{item.source || '—'}</td>
-                <td>{item.contract_count}</td>
-                <td>{item.committed_count}</td>
-                <td><span className={`badge state-${item.state}`}>{item.state}</span></td>
-                <td>{item.created_on ? item.created_on.slice(0, 16).replace('T', ' ') : '—'}</td>
-                <td><button className="btn small" onClick={() => onOpen(item.id)} disabled={busy}>Open</button></td>
-              </tr>
-            ))}
-            {!batches.length ? <tr><td colSpan={7} className="muted center">No batches yet.</td></tr> : null}
-          </tbody>
-        </table>
-      </section>
-    </div>
-  )
-}
-
-function BatchDetail({
+function ContractList({
   batch,
+  lookups,
   busy,
-  onBack,
   onNew,
   onOpenContract,
   onCommitAll,
 }: {
   batch: Batch
+  lookups: Lookups
   busy: boolean
-  onBack: () => void
   onNew: () => void
   onOpenContract: (contract: Contract) => void
   onCommitAll: () => void
 }) {
   const contracts = batch.contracts || []
   const draft = contracts.filter((item) => item.state !== 'committed' && item.state !== 'cancelled')
+  const [buildingFilter, setBuildingFilter] = useState<number | ''>('')
+  const [unitFilter, setUnitFilter] = useState<number | ''>('')
+
+  const buildings = Array.from(
+    new Map(
+      contracts
+        .map((item) => lookups.buildings.find((building) => building.id === item.unit.building_id))
+        .filter((building): building is Building => Boolean(building))
+        .map((building) => [building.id, building]),
+    ).values(),
+  ).sort((a, b) => a.code.localeCompare(b.code))
+
+  const unitMap = new Map<number, { id: number; code: string; name: string }>()
+  for (const contract of contracts) {
+    if (buildingFilter && contract.unit.building_id !== buildingFilter) continue
+    if (!contract.unit.unit_id) continue
+    unitMap.set(contract.unit.unit_id, {
+      id: contract.unit.unit_id,
+      code: contract.unit.unit_code,
+      name: contract.unit.name,
+    })
+  }
+  const units = Array.from(unitMap.values()).sort((a, b) => a.code.localeCompare(b.code))
+
+  const filtered = contracts.filter((contract) => {
+    if (buildingFilter && contract.unit.building_id !== buildingFilter) return false
+    if (unitFilter && contract.unit.unit_id !== unitFilter) return false
+    return true
+  })
+
+  function changeBuilding(value: string) {
+    setBuildingFilter(value ? Number(value) : '')
+    setUnitFilter('')
+  }
+
+  function clearFilters() {
+    setBuildingFilter('')
+    setUnitFilter('')
+  }
+
   return (
     <div className="page">
       <div className="page-head">
         <div>
-          <button className="link" onClick={onBack}>← All batches</button>
           <h2>{batch.name}</h2>
-          <p className="muted">{batch.source || 'No source'} · {batch.company.name} · created by {batch.created_by}</p>
+          <p className="muted">
+            {batch.source || 'Source file not recorded'} · {batch.company.name} · created by {batch.created_by}
+          </p>
         </div>
         <div className="actions">
           <button className="btn" onClick={onNew}>New contract</button>
@@ -407,26 +408,107 @@ function BatchDetail({
         <div><span>Failed</span><b>{batch.failed_count}</b></div>
       </div>
 
+      <section className="card filters-card">
+        <div className="filters">
+          <label>Building
+            <select value={buildingFilter} onChange={(event) => changeBuilding(event.target.value)}>
+              <option value="">All buildings</option>
+              {buildings.map((building) => (
+                <option key={building.id} value={building.id}>{building.name}</option>
+              ))}
+            </select>
+          </label>
+          <label>Unit
+            <select value={unitFilter} onChange={(event) => setUnitFilter(event.target.value ? Number(event.target.value) : '')}>
+              <option value="">All units</option>
+              {units.map((unit) => (
+                <option key={unit.id} value={unit.id}>{unit.code} · {unit.name}</option>
+              ))}
+            </select>
+          </label>
+          <div className="filter-actions">
+            <button className="btn small" onClick={clearFilters} disabled={!buildingFilter && !unitFilter}>
+              Clear
+            </button>
+            <span className="filter-summary">Showing {filtered.length} of {contracts.length}</span>
+          </div>
+        </div>
+      </section>
+
       <section className="card">
-        <table className="table">
+        <div className="table-wrap">
+        <table className="table contracts-table">
+          <colgroup>
+            <col className="w-ref" />
+            <col className="w-client" />
+            <col className="w-unit" />
+            <col className="w-price" />
+            <col className="w-dp" />
+            <col className="w-paid" />
+            <col className="w-balance" />
+            <col className="w-future" />
+            <col className="w-state" />
+          </colgroup>
           <thead>
-            <tr><th>Reference</th><th>Client</th><th>Unit</th><th>Price</th><th>State</th><th>Error</th><th /></tr>
+            <tr>
+              <th>Reference</th><th>Client</th><th>Unit</th><th>Per Agreement Price</th>
+              <th>Down payment (net)</th><th>Paid Installment</th><th>Balance (net)</th>
+              <th>Future Installments Count</th><th className="col-state">State</th>
+            </tr>
           </thead>
           <tbody>
-            {contracts.map((item) => (
-              <tr key={item.id}>
-                <td><b>{item.external_ref}</b></td>
-                <td>{item.client.name || '—'}</td>
-                <td>{item.unit.unit_code || '—'}</td>
-                <td>{money(item.amounts.contract_gross)}</td>
-                <td><span className={`badge state-${item.state}`}>{item.state}</span></td>
-                <td className="error-text">{item.error_message || ''}</td>
-                <td><button className="btn small" onClick={() => onOpenContract(item)}>Open</button></td>
+            {filtered.map((item) => {
+              const building = lookups.buildings.find((candidate) => candidate.id === item.unit.building_id)
+              return (
+                <tr
+                  key={item.id}
+                  className="contract-row"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => onOpenContract(item)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault()
+                      onOpenContract(item)
+                    }
+                  }}
+                >
+                  <td title={item.external_ref}><b>{item.external_ref}</b></td>
+                  <td title={item.client.name || ''}>{item.client.name || '—'}</td>
+                  <td
+                    className="col-unit"
+                    title={`${item.unit.unit_code || '—'}${building ? ` · ${building.name}` : ''}`}
+                  >
+                    {item.unit.unit_code || '—'}
+                  </td>
+                  <td className="num" title={money(item.amounts.contract_gross)}>{money(item.amounts.contract_gross)}</td>
+                  <td className="num" title={money(item.amounts.down_payment_net)}>{money(item.amounts.down_payment_net)}</td>
+                  <td className="num" title={money(item.amounts.schedule_gross)}>{money(item.amounts.schedule_gross)}</td>
+                  <td className="num" title={money(item.amounts.remaining_net)}>{money(item.amounts.remaining_net)}</td>
+                  <td
+                    className="num"
+                    title={
+                      item.agreement.installment_count
+                        ? `${item.agreement.installment_count} × ${money(item.amounts.installment_gross)} gross per month`
+                        : 'No remaining installments'
+                    }
+                  >
+                    {item.agreement.installment_count}
+                  </td>
+                  <td className="col-state"><span className={`badge state-${item.state}`}>{item.state}</span></td>
+                </tr>
+              )
+            })}
+            {!filtered.length ? (
+              <tr>
+                <td colSpan={9} className="muted center">
+                  {contracts.length ? 'No contracts match these filters.' : 'No contracts yet.'}
+                </td>
               </tr>
-            ))}
-            {!contracts.length ? <tr><td colSpan={7} className="muted center">No contracts in this batch yet.</td></tr> : null}
+            ) : null}
           </tbody>
         </table>
+        </div>
       </section>
     </div>
   )

@@ -1,6 +1,6 @@
 # Backlog Contract Entry — Client User Guide
 
-**For:** Contemporary Developers Ltd — UDOWE and Amani backlog contracts  
+**For:** Contemporary Developers Ltd — UDOWE contracts  
 **System:** Odoo + the MKUYU backlog entry page  
 **Access link:** ______________________________  
 **Support:** ______________________________
@@ -10,11 +10,14 @@
 ## 1. What this page is for
 
 Use this page to enter **existing/backlog property sale contracts** into Odoo:
-the client, the unit, the agreement price, the down payment, the installments
-already paid, and the remaining monthly plan.
+the contact, the existing unit, the agreement price, the down payment, the
+installments already paid, and the remaining monthly plan.
 
 **Do not use this page for a new sale.** New sales follow the normal Odoo
 reservation → down payment → installment flow.
+
+The page opens directly on the assigned contract list. Its name is shown at the
+top. There is nothing to create or select before you start.
 
 ---
 
@@ -25,103 +28,119 @@ You need:
 - the access link above;
 - your Odoo email and password (ask the administrator if you do not have them);
 - the signed agreement or the client file you are entering;
-- the project/site and unit for the contract.
+- the unit for the contract.
 
 The page shows a badge at the top:
 
 - **STAGING** — test/review data. Check with the administrator before entering
   live information.
 - **PRODUCTION** — live data. Entries here affect real client balances.
+- **LOCAL** — the developer's local copy; not for client use.
 
 Confirm the badge and the Odoo address before you type anything.
 
 ---
 
-## 3. The three screens
+## 3. The contract list
 
-### Batches
+After signing in you land on the assigned contract list. The name, source file
+and company are shown at the top.
 
-A batch groups the contracts from one file or one project, for example
-“UDOWE existing contracts — October 2026”.
+At the top:
 
-- **Open** an existing batch.
-- **Create batch** for a new file/project.
+- **Source file** — `UDOWE PROJECT .xlsx`
+- **Company** — Contemporary Developers Ltd
+- **Created by** — the person who loaded the list
+- **Contracts / Valid / Committed / Failed** — counts for the list
+- **New contract** — add one contract
+- **Commit N contracts** — commit every draft in the list
 
-Use one batch per file/project so the work is easy to review.
+### Filters
 
-### Batch detail
+Use the two filters above the table:
 
-Shows every contract in the batch and its state. From here:
+- **Building** — show only contracts in one building.
+- **Unit** — show only one unit; the unit list follows the selected building.
 
-- **New contract** — add another contract.
-- **Open** — edit a draft or review a committed contract.
-- **Commit N contracts** — commit every draft in the batch.
+**Clear** resets both filters. The page shows **“Showing X of Y”** so you know
+how many contracts are displayed.
 
-### Contract form
+The table shows:
 
-The form has six sections: Client, Unit, Commercials, Installments already due,
-Preview, and Notes.
+| Column | Meaning |
+|---|---|
+| Reference | The contract reference (unique). |
+| Client | The buyer. |
+| Unit | The unit code and building. |
+| Per Agreement Price | Per Agreement price in TZS (gross). |
+| Down payment (net) | Down payment excluding VAT. |
+| Paid Installment | Total gross of the previous installments in the table. |
+| Balance (net) | Amount still to be paid by the remaining installments, excluding VAT. |
+| Future Installments Count | Number of remaining monthly installments. Hover for the monthly amount. |
+| State | Draft / Valid / Committed / Failed. |
+
+Click any row to open that contract.
 
 ---
 
-## 4. Enter a contract — step by step
+## 4. Enter a contract
 
-### Step 1 — Open or create a batch
+Click **New contract**.
 
-1. Sign in.
-2. Open the assigned batch, or click **Create batch** and give it a clear name
-   and the source file name.
-3. Click **New contract**.
+### Step 1 — Contact
 
-### Step 2 — Client
-
-- **Existing client** — search and select the client if they are already in
-  Odoo.
-- **New client** — leave “— New client —” and enter:
-  - client name (as on the agreement);
-  - phone;
-  - email (needed for the Client App);
-  - national ID / customer ID if available.
+- **Contact** — select an existing contact from the list.
+- Click **New contact** to clear the selection and enter a new contact. The
+  button is enabled only when an existing contact is selected.
+- If you add a new contact, enter:
+  - **Name** (required);
+  - **Phone**;
+  - **Email** (needed for the Client App);
+  - **National ID**;
+  - **Customer ID**.
 - **Contract reference** — a unique reference, e.g.
-  `UDOWE-U0201-MOHAMED`. It is used to prevent duplicates. Do not reuse a
-  reference.
+  `UDOWE-U0201-MOHAMED`. It prevents duplicates. Do not reuse a reference.
 
-### Step 3 — Unit
+A new contact is created **when the contract is committed**. Only the contact is
+new; units, buildings, taxes and prices come from the existing Odoo records.
+After the first contract is committed, the contact appears in the contact list
+for the next contract.
 
-- **Site** — select the project.
-- **Building** — normally filled automatically.
-- **Existing unit** — select the unit if it exists.
-- **Unit code** — or type the code if you know it.
-- **Floor / side text** — for example `2nd Road Side`. The page reads the floor
-  and side from this.
-- **Floor** and **Side** — road side = `01` series, back side = `02` series.
-- **Unit type** — apartment/shop/office/plot.
-- **Create the unit if it does not exist** — tick only for an ordinary road/back
-  apartment that is genuinely missing. The page shows the expected unit code:
-  - green = found;
-  - amber = will be created.
+If the name and phone match an existing contact, Odoo may reuse that contact
+instead of creating a second one.
 
-**Do not use this page to create a full-floor, corner or penthouse unit.** Stop
-and contact the administrator; those units need a different unit master.
+### Step 2 — Unit
 
-### Step 4 — Commercials
+- **Site** — select the site from the company’s sites. The unit list follows the
+  selected site.
+- **Unit** — select an **existing** unit at that site.
+  - Only available units are listed, plus the unit already on the contract.
+  - Units from all buildings on the site are shown.
+  - The selected unit shows its code, name, site, building, type and status.
+- **New units cannot be created here.** If the unit is missing, contact the
+  administrator.
 
-- **Contract price (gross)** — the “per agreement” figure.
+### Step 3 — Commercials
+
+- **Per Agreement price** — the gross figure on the signed agreement.
 - **The price includes VAT** — tick if the agreed figure already includes VAT
   (the usual case). Untick only if VAT is added on top.
 - **VAT** — normally `VAT 18% (sales)`.
 - **Agreement date** — the date on the agreement.
 - **Down payment (gross)** — the amount received.
-- **Down payment date** — the date received.
+- **Down payment date** — the date received. It defaults to **1 Jan 2026**;
+  change it if the deposit was received on another date. Previously committed
+  contracts keep their own date.
 - **Down payment received** — tick if received.
 - **Payment method** — bank/cash/mobile/cheque.
-- **Remaining installments** — the number of **future** monthly installments,
-  not the total term.
-- **First installment date** — the next due date.
 
 All amounts are in **TZS**. USD contracts are not supported in this form.
 
-### Step 5 — Installments already due
+### Step 4 — Installments
+
+This section has two parts.
+
+#### Previous Installments
 
 This table is only for installments that are **already due**: paid or overdue.
 
@@ -129,15 +148,26 @@ For each one:
 
 - **Due date** — the contractual due date.
 - **Amount (gross)** — the amount on the agreement.
-- **Paid** — tick if received.
-- **Paid date** — the date received.
+- **Paid** — tick if received. New lines are ticked by default, which creates
+  an invoice **and** a payment. Untick it if the client has not paid, so only
+  an invoice is created.
+- **Paid date** — the date received. Leave it blank to use the due date.
 - **Method** — how it was received.
 - **Reference** — receipt/EFT number if available.
 
-Do **not** put future installments in this table. Future installments are
-covered by “Remaining installments” above.
+Do **not** put future installments in this table.
 
-### Step 6 — Review
+#### Remaining Installments
+
+- **Remaining installments** — the number of **future** monthly installments,
+  not the total term. For a 6-month plan with 2 previous installments listed,
+  enter **4**.
+- **Remaining Installment Start Date** — the next due date. Use **Use month
+  after last paid** to set it to the month following the latest paid line.
+- The form shows the **total term**, e.g. `6 months = 2 listed + 4 remaining`.
+  The remaining months are split equally and invoiced by one subscription.
+
+### Step 5 — Review
 
 The Preview shows:
 
@@ -150,7 +180,7 @@ The Preview shows:
 
 If a red or amber message appears, fix it before committing.
 
-### Step 7 — Save & validate
+### Step 6 — Save & validate
 
 Click **Save & validate**. The page stores a draft and asks Odoo to validate it.
 
@@ -158,14 +188,14 @@ Click **Save & validate**. The page stores a draft and asks Odoo to validate it.
 - Red errors — the contract is not ready. Read each message and fix the form.
 - Amber warnings — the contract can be committed, but check the point first.
 
-### Step 8 — Commit
+### Step 7 — Commit
 
 Click **Commit to Odoo**. A confirmation window shows the reference and contract
 value. Confirm only when the contract is complete.
 
 Commit creates:
 
-- the client contact (if new);
+- the contact (if new);
 - the unit sale (unit becomes Sold);
 - the down-payment sale order, invoice and payment;
 - the installment subscription for the remaining months;
@@ -174,7 +204,7 @@ Commit creates:
 **A committed contract cannot be edited in this page.** If something is wrong,
 contact the administrator.
 
-### Step 9 — Check the result
+### Step 8 — Check the result
 
 After commit, the page shows the created order, subscription, invoice and payment
 numbers. Check them against the agreement. The contract state becomes
@@ -187,16 +217,19 @@ numbers. Check them against the agreement. The contract state becomes
 | Field | Rule |
 |---|---|
 | Contract reference | Unique; keep it stable; never reuse. |
-| Client | Use the legal name; add email/phone for the Client App. |
-| Unit | Road = 01, Back = 02. One contract per unit. |
-| Contract price | Gross TZS amount from the agreement. |
+| Contact | Select an existing contact or click **New contact**; use the legal name; add email/phone for the Client App. A new contact is saved on commit. |
+| Unit | Existing unit only; one contract per unit. |
+| Per Agreement price | Gross TZS amount on the signed agreement. |
 | VAT | Tick “includes VAT” for the usual agreed price. |
 | Down payment | Actual amount received, not always exactly 40%. |
-| Remaining installments | Future count only. |
+| Down payment date | Defaults to 1 Jan 2026; change it per contract if needed. |
+| Remaining installments | Future count only; total term minus months already listed. |
+| Total term | Listed installments + remaining installments; the form shows the sum. |
+| Remaining Installment Start Date | Month after the last paid installment; the helper button fills it. |
 | Schedule table | Only installments already due (paid or overdue). |
-| Paid date | Actual receipt date, not the due date if different. |
+| Paid | Ticked by default → invoice + payment; untick for an unpaid invoice only. |
+| Paid date | Actual receipt date; blank uses the due date. |
 | Currency | TZS only. Hold USD contracts. |
-| Full floor / corner / penthouse | Do not create here; contact the administrator. |
 
 ---
 
@@ -217,11 +250,12 @@ numbers. Check them against the agreement. The contract state becomes
 
 | Message | What it means | What to do |
 |---|---|---|
-| `unit ... not found` | The unit code does not exist. | Select the unit or, for a road/back apartment only, tick “create if missing”. |
+| `Select an existing unit` | No unit is selected. | Select a unit from the list. |
+| `unit ... not found` | The unit is not in Odoo. | Contact the administrator; do not create it here. |
 | `unit ... already sold` | Another contract owns the unit. | Check the unit in Odoo; do not create a second sale. |
 | `A down payment is required when there are installments` | The DP is zero. | Enter the DP. |
 | `Balance ... is zero` | DP + listed installments already pay the contract. | Remove the remaining installment count or correct the amounts. |
-| `installments on/after first future date` | A schedule line overlaps the future plan. | Move the first future date or remove the line. |
+| `installments on/after first future date` | A schedule line overlaps the future plan. | Move the Remaining Installment Start Date or remove the line. |
 | `Currency ... not the company currency` | A USD/other-currency contract. | Hold it; contact the administrator. |
 | `Your role cannot import legacy contracts` | The login lacks the import group. | Contact the administrator. |
 | `Session expired` | The login expired. | Sign in again. |
@@ -231,12 +265,12 @@ numbers. Check them against the agreement. The contract state becomes
 
 ## 8. Do not commit if…
 
-- the contract price or down payment is missing;
+- the Per Agreement price or down payment is missing;
 - the installment amounts are missing or blank;
-- the unit is a full floor, corner or penthouse;
+- the unit is not the one on the agreement;
 - the currency is USD;
 - the sheet says “DONE” but the payment history is not provided;
-- the client/unit is not confirmed.
+- the contact or unit is not confirmed.
 
 Save the draft and ask the administrator. A wrong commit affects invoices,
 payments and the client statement.
@@ -270,14 +304,25 @@ A completed UDOWE example:
 | Field | Value |
 |---|---|
 | Contract reference | `UDOWE-U0201-MOHAMED` |
-| Client | Mohamedhussein Sadik Hasham |
+| Contact | Mohamedhussein Sadik Hasham |
 | Unit | U0201 — 2nd Road |
-| Contract price | 175,000,000 |
+| Per Agreement price | 175,000,000 |
 | Price includes VAT | Yes |
 | Agreement date | 31 Aug 2026 |
 | Down payment | 70,000,000 |
 | Down payment received | Yes, bank |
 | Remaining installments | 6 |
-| First installment date | 30 Jan 2027 |
+| Remaining Installment Start Date | 30 Jan 2027 |
 | Installments already due | 15,000,000 on 31 Aug 2026, paid by bank |
 | Result | Balance 90,000,000; 6 × 15,000,000 |
+
+### Six-month plan with two months already paid
+
+| Field | Value |
+|---|---|
+| Total term | 6 months |
+| Already paid | Aug 2026 and Sep 2026 → 2 schedule lines, **Paid** ticked |
+| Remaining installments | 4 (**not** 6) |
+| Remaining Installment Start Date | Oct 2026 — use **Use month after last paid** |
+| Down payment date | 1 Jan 2026, or the date actually received |
+| Result | 2 posted invoices + 2 payments; one subscription for Oct 2026 – Jan 2027 |
