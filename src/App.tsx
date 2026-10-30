@@ -464,21 +464,31 @@ function ContractList({
             <col className="w-balance" />
             <col className="w-future" />
             <col className="w-state" />
-            <col className="w-error" />
-            <col className="w-actions" />
           </colgroup>
           <thead>
             <tr>
               <th>Reference</th><th>Client</th><th>Unit</th><th>Per Agreement Price</th>
               <th>Down payment (net)</th><th>Paid Installment</th><th>Balance (net)</th>
-              <th>Future Installments Count</th><th className="col-state">State</th><th className="col-error">Error</th><th className="col-actions" />
+              <th>Future Installments Count</th><th className="col-state">State</th>
             </tr>
           </thead>
           <tbody>
             {filtered.map((item) => {
               const building = lookups.buildings.find((candidate) => candidate.id === item.unit.building_id)
               return (
-                <tr key={item.id}>
+                <tr
+                  key={item.id}
+                  className="contract-row"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => onOpenContract(item)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault()
+                      onOpenContract(item)
+                    }
+                  }}
+                >
                   <td title={item.external_ref}><b>{item.external_ref}</b></td>
                   <td title={item.client.name || ''}>{item.client.name || '—'}</td>
                   <td
@@ -502,16 +512,12 @@ function ContractList({
                     {item.agreement.installment_count}
                   </td>
                   <td><span className={`badge state-${item.state}`}>{item.state}</span></td>
-                  <td className="col-error">
-                    <div className="error-text truncate" title={item.error_message || ''}>{item.error_message || ''}</div>
-                  </td>
-                  <td className="col-actions"><button className="btn small" onClick={() => onOpenContract(item)}>Open</button></td>
                 </tr>
               )
             })}
             {!filtered.length ? (
               <tr>
-                <td colSpan={11} className="muted center">
+                <td colSpan={9} className="muted center">
                   {contracts.length ? 'No contracts match these filters.' : 'No contracts yet.'}
                 </td>
               </tr>

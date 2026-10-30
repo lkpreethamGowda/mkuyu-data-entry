@@ -79,8 +79,8 @@ The table shows:
 | Balance (net) | Amount still to be paid by the remaining installments, excluding VAT. |
 | Future Installments Count | Number of remaining monthly installments. Hover for the monthly amount. |
 | State | Draft / Valid / Committed / Failed. |
-| Error | The last error, if any. |
-| Open | Open the contract. |
+
+Click any row to open that contract.
 
 ---
 
