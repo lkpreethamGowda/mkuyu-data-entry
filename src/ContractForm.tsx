@@ -120,6 +120,7 @@ export default function ContractForm({
   const [server, setServer] = useState<Contract | null>(contract)
   const [busy, setBusy] = useState<Busy>(null)
   const [error, setError] = useState('')
+  const [refAttempted, setRefAttempted] = useState(false)
   const externalRefInput = useRef<HTMLInputElement>(null)
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) => {
@@ -214,6 +215,7 @@ export default function ContractForm({
   }, [form, remainingNet, scheduleGross, effectiveDownPayment])
 
   const committed = server?.state === 'committed' || contract?.state === 'committed'
+  const showRefError = refAttempted && !form.externalRef.trim()
 
   function changePartner(value: string) {
     if (!value) {
@@ -343,6 +345,7 @@ export default function ContractForm({
 
   async function save(): Promise<Contract | null> {
     if (!form.externalRef.trim()) {
+      setRefAttempted(true)
       externalRefInput.current?.focus()
       externalRefInput.current?.scrollIntoView({ block: 'center', behavior: 'smooth' })
       return null
@@ -463,13 +466,17 @@ export default function ContractForm({
           <label>Contract reference
             <input
               ref={externalRefInput}
-              className={!form.externalRef.trim() ? 'input-invalid' : undefined}
-              aria-invalid={!form.externalRef.trim()}
+              className={showRefError ? 'input-invalid' : undefined}
+              aria-invalid={showRefError}
               value={form.externalRef}
-              onChange={(event) => set('externalRef', event.target.value)}
+              onChange={(event) => {
+                const value = event.target.value
+                set('externalRef', value)
+                if (value.trim()) setRefAttempted(false)
+              }}
               placeholder="UDOWE-201-MOHAMED"
             />
-            {!form.externalRef.trim() ? (
+            {showRefError ? (
               <span className="field-error">Enter the contract reference before saving.</span>
             ) : null}
           </label>
