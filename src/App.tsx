@@ -453,12 +453,12 @@ function ContractList({
 
       <section className="card">
         <div className="table-wrap">
-        <table className="table">
+        <table className="table contracts-table">
           <thead>
             <tr>
               <th>Reference</th><th>Client</th><th>Unit</th><th>Per Agreement Price</th>
               <th>Down payment (net)</th><th>Paid Installment</th><th>Balance (net)</th>
-              <th>Future Installments Count</th><th>State</th><th>Error</th><th />
+              <th>Future Installments Count</th><th className="col-state">State</th><th className="col-error">Error</th><th className="col-actions" />
             </tr>
           </thead>
           <tbody>
@@ -487,8 +487,10 @@ function ContractList({
                     {item.agreement.installment_count}
                   </td>
                   <td><span className={`badge state-${item.state}`}>{item.state}</span></td>
-                  <td className="error-text">{item.error_message || ''}</td>
-                  <td><button className="btn small" onClick={() => onOpenContract(item)}>Open</button></td>
+                  <td className="col-error">
+                    <div className="error-text truncate" title={item.error_message || ''}>{item.error_message || ''}</div>
+                  </td>
+                  <td className="col-actions"><button className="btn small" onClick={() => onOpenContract(item)}>Open</button></td>
                 </tr>
               )
             })}

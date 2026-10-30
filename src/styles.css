@@ -142,6 +142,13 @@ textarea { resize: vertical; }
 .table { width: 100%; border-collapse: collapse; }
 .table-wrap { overflow-x: auto; }
 .table .num { white-space: nowrap; }
+
+.contracts-table th, .contracts-table td { padding-left: 6px; padding-right: 6px; }
+.contracts-table .col-state,
+.contracts-table .col-error,
+.contracts-table .col-actions { width: 1%; white-space: nowrap; }
+.contracts-table .col-state .badge { margin-left: 0; }
+.contracts-table .truncate { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .table th {
   text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .04em;
   color: var(--muted); padding: 8px; border-bottom: 1px solid var(--line);
