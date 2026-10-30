@@ -282,7 +282,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: SessionUser) => void }) {
             <span>Legacy contract import</span>
           </div>
         </div>
-        <p className="muted">Sign in with your Odoo account. {odooUrl()}</p>
+        <p className="muted">Sign in with the Odoo account provided by MKUYU. {odooUrl()}</p>
         <label>Email
           <input value={loginName} onChange={(event) => setLoginName(event.target.value)} autoComplete="username" />
         </label>
