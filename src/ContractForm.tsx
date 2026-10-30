@@ -195,14 +195,14 @@ export default function ContractForm({
       list.push('A contract with listed installments needs a remaining installment count.')
     }
     if (form.installmentCount > 0 && !form.firstInstallmentDate) {
-      list.push('Set the first installment date.')
+      list.push('Set the Remaining Installment Start Date.')
     }
     if (form.installmentCount > 0 && effectiveDownPayment <= 0) {
       list.push('A down payment is required when there are installments.')
     }
     if (form.installmentCount > 0 && form.firstInstallmentDate) {
       const late = form.schedule.filter((line) => line.due_date && line.due_date >= form.firstInstallmentDate)
-      if (late.length) list.push('Some installments are on or after the first future installment date.')
+      if (late.length) list.push('Some previous installments are on or after the Remaining Installment Start Date.')
     }
     if (form.schedule.some((line) => Number(line.amount) <= 0)) {
       list.push('Every listed installment needs an amount greater than zero.')
@@ -546,43 +546,20 @@ export default function ContractForm({
               {lookups.methods.map((method) => <option key={method.value} value={method.value}>{method.label}</option>)}
             </select>
           </label>
-          <label>Remaining installments
-            <input type="number" min={0} max={36} value={form.installmentCount || ''} onChange={(event) => set('installmentCount', Number(event.target.value) || 0)} />
-            <span className="muted small">
-              Months still to pay, not the total term. For a 6-month plan with 2 months already listed, enter 4.
-            </span>
-          </label>
-          <label>First installment date
-            <input type="date" value={form.firstInstallmentDate} onChange={(event) => set('firstInstallmentDate', event.target.value)} />
-            <button
-              className="link small"
-              type="button"
-              onClick={useMonthAfterLastPaid}
-              disabled={!lastPaidDate}
-              title={lastPaidDate ? `Next month after ${lastPaidDate}` : 'Add a paid installment first'}
-            >
-              {lastPaidDate ? `Use month after last paid (${nextMonth(lastPaidDate)})` : 'Use month after last paid'}
-            </button>
-          </label>
         </div>
-        {totalTerm > 0 ? (
-          <p className="hint info">
-            Total term: <b>{totalTerm} month{totalTerm === 1 ? '' : 's'}</b> = {listedCount} listed +{' '}
-            {remainingCount} remaining. The remaining months are split equally and invoiced by one subscription.
-          </p>
-        ) : null}
-        <p className="muted small">All amounts are in TZS. USD contracts are not supported in this form.</p>
       </section>
 
       <section className="card">
-        <div className="section-head">
-          <h3>4. Installments already due</h3>
+        <h3>4. Installments</h3>
+
+        <div className="subsection-head">
+          <h4>Previous Installments</h4>
           <button className="btn small" onClick={addLine} type="button">Add installment</button>
         </div>
         <p className="muted">
           Add only the installments that are due now (paid or overdue). New lines are marked <b>Paid</b> by default,
           which creates an invoice and a payment; untick it if the client has not paid. A blank paid date uses the due
-          date. The remaining balance is split equally over the “remaining installments” above and invoiced by the
+          date. The remaining balance is split equally over the “remaining installments” below and invoiced by the
           subscription.
         </p>
         <table className="table">
@@ -611,6 +588,35 @@ export default function ContractForm({
             {!form.schedule.length ? <tr><td colSpan={8} className="muted center">No installments listed.</td></tr> : null}
           </tbody>
         </table>
+
+        <h4>Remaining Installments</h4>
+        <div className="grid two">
+          <label>Remaining installments
+            <input type="number" min={0} max={36} value={form.installmentCount || ''} onChange={(event) => set('installmentCount', Number(event.target.value) || 0)} />
+            <span className="muted small">
+              Months still to pay, not the total term. For a 6-month plan with 2 months already listed, enter 4.
+            </span>
+          </label>
+          <label>Remaining Installment Start Date
+            <input type="date" value={form.firstInstallmentDate} onChange={(event) => set('firstInstallmentDate', event.target.value)} />
+            <button
+              className="link small"
+              type="button"
+              onClick={useMonthAfterLastPaid}
+              disabled={!lastPaidDate}
+              title={lastPaidDate ? `Next month after ${lastPaidDate}` : 'Add a paid installment first'}
+            >
+              {lastPaidDate ? `Use month after last paid (${nextMonth(lastPaidDate)})` : 'Use month after last paid'}
+            </button>
+          </label>
+        </div>
+        {totalTerm > 0 ? (
+          <p className="hint info">
+            Total term: <b>{totalTerm} month{totalTerm === 1 ? '' : 's'}</b> = {listedCount} listed +{' '}
+            {remainingCount} remaining. The remaining months are split equally and invoiced by one subscription.
+          </p>
+        ) : null}
+        <p className="muted small">All amounts are in TZS. USD contracts are not supported in this form.</p>
       </section>
 
       <section className="card totals">
@@ -630,7 +636,7 @@ export default function ContractForm({
           {totalTerm > 0
             ? `total term ${totalTerm} month${totalTerm === 1 ? '' : 's'} (${listedCount} listed + ${remainingCount} remaining)`
             : `${remainingCount} remaining installment(s)`}{' '}
-          · first {form.firstInstallmentDate || '—'}
+          · remaining starts {form.firstInstallmentDate || '—'}
         </p>
       </section>
 

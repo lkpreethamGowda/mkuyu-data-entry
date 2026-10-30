@@ -128,17 +128,14 @@ instead of creating a second one.
   contracts keep their own date.
 - **Down payment received** — tick if received.
 - **Payment method** — bank/cash/mobile/cheque.
-- **Remaining installments** — the number of **future** monthly installments,
-  not the total term. For a 6-month plan with 2 months already listed below,
-  enter **4**.
-- **First installment date** — the next due date. Use **Use month after last
-  paid** to set it to the month following the latest paid line.
-- The form shows the **total term**, e.g. `6 months = 2 listed + 4 remaining`.
-  The remaining months are split equally and invoiced by one subscription.
 
 All amounts are in **TZS**. USD contracts are not supported in this form.
 
-### Step 4 — Installments already due
+### Step 4 — Installments
+
+This section has two parts.
+
+#### Previous Installments
 
 This table is only for installments that are **already due**: paid or overdue.
 
@@ -153,8 +150,17 @@ For each one:
 - **Method** — how it was received.
 - **Reference** — receipt/EFT number if available.
 
-Do **not** put future installments in this table. Future installments are
-covered by “Remaining installments” above.
+Do **not** put future installments in this table.
+
+#### Remaining Installments
+
+- **Remaining installments** — the number of **future** monthly installments,
+  not the total term. For a 6-month plan with 2 previous installments listed,
+  enter **4**.
+- **Remaining Installment Start Date** — the next due date. Use **Use month
+  after last paid** to set it to the month following the latest paid line.
+- The form shows the **total term**, e.g. `6 months = 2 listed + 4 remaining`.
+  The remaining months are split equally and invoiced by one subscription.
 
 ### Step 5 — Review
 
@@ -214,7 +220,7 @@ numbers. Check them against the agreement. The contract state becomes
 | Down payment date | Defaults to 1 Jan 2026; change it per contract if needed. |
 | Remaining installments | Future count only; total term minus months already listed. |
 | Total term | Listed installments + remaining installments; the form shows the sum. |
-| First installment date | Month after the last paid installment; the helper button fills it. |
+| Remaining Installment Start Date | Month after the last paid installment; the helper button fills it. |
 | Schedule table | Only installments already due (paid or overdue). |
 | Paid | Ticked by default → invoice + payment; untick for an unpaid invoice only. |
 | Paid date | Actual receipt date; blank uses the due date. |
@@ -244,7 +250,7 @@ numbers. Check them against the agreement. The contract state becomes
 | `unit ... already sold` | Another contract owns the unit. | Check the unit in Odoo; do not create a second sale. |
 | `A down payment is required when there are installments` | The DP is zero. | Enter the DP. |
 | `Balance ... is zero` | DP + listed installments already pay the contract. | Remove the remaining installment count or correct the amounts. |
-| `installments on/after first future date` | A schedule line overlaps the future plan. | Move the first future date or remove the line. |
+| `installments on/after first future date` | A schedule line overlaps the future plan. | Move the Remaining Installment Start Date or remove the line. |
 | `Currency ... not the company currency` | A USD/other-currency contract. | Hold it; contact the administrator. |
 | `Your role cannot import legacy contracts` | The login lacks the import group. | Contact the administrator. |
 | `Session expired` | The login expired. | Sign in again. |
@@ -301,7 +307,7 @@ A completed UDOWE example:
 | Down payment | 70,000,000 |
 | Down payment received | Yes, bank |
 | Remaining installments | 6 |
-| First installment date | 30 Jan 2027 |
+| Remaining Installment Start Date | 30 Jan 2027 |
 | Installments already due | 15,000,000 on 31 Aug 2026, paid by bank |
 | Result | Balance 90,000,000; 6 × 15,000,000 |
 
@@ -312,6 +318,6 @@ A completed UDOWE example:
 | Total term | 6 months |
 | Already paid | Aug 2026 and Sep 2026 → 2 schedule lines, **Paid** ticked |
 | Remaining installments | 4 (**not** 6) |
-| First installment date | Oct 2026 — use **Use month after last paid** |
+| Remaining Installment Start Date | Oct 2026 — use **Use month after last paid** |
 | Down payment date | 1 Jan 2026, or the date actually received |
 | Result | 2 posted invoices + 2 payments; one subscription for Oct 2026 – Jan 2027 |
