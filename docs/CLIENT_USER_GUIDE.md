@@ -117,7 +117,7 @@ instead of creating a second one.
 
 ### Step 3 — Commercials
 
-- **Contract price (gross)** — the “per agreement” figure.
+- **Per Agreement price** — the gross figure on the signed agreement.
 - **The price includes VAT** — tick if the agreed figure already includes VAT
   (the usual case). Untick only if VAT is added on top.
 - **VAT** — normally `VAT 18% (sales)`.
@@ -208,7 +208,7 @@ numbers. Check them against the agreement. The contract state becomes
 | Contract reference | Unique; keep it stable; never reuse. |
 | Contact | Select an existing contact or click **New contact**; use the legal name; add email/phone for the Client App. A new contact is saved on commit. |
 | Unit | Existing unit only; one contract per unit. |
-| Contract price | Gross TZS amount from the agreement. |
+| Per Agreement price | Gross TZS amount on the signed agreement. |
 | VAT | Tick “includes VAT” for the usual agreed price. |
 | Down payment | Actual amount received, not always exactly 40%. |
 | Down payment date | Defaults to 1 Jan 2026; change it per contract if needed. |
@@ -254,7 +254,7 @@ numbers. Check them against the agreement. The contract state becomes
 
 ## 8. Do not commit if…
 
-- the contract price or down payment is missing;
+- the Per Agreement price or down payment is missing;
 - the installment amounts are missing or blank;
 - the unit is not the one on the agreement;
 - the currency is USD;
@@ -295,7 +295,7 @@ A completed UDOWE example:
 | Contract reference | `UDOWE-U0201-MOHAMED` |
 | Contact | Mohamedhussein Sadik Hasham |
 | Unit | U0201 — 2nd Road |
-| Contract price | 175,000,000 |
+| Per Agreement price | 175,000,000 |
 | Price includes VAT | Yes |
 | Agreement date | 31 Aug 2026 |
 | Down payment | 70,000,000 |

@@ -70,7 +70,7 @@ contact, selecting an existing unit, validation, commit and common messages.
    - select an existing contact or click **New contact** to enter one (the
      contact is created on commit);
    - select an **existing** unit (no unit creation);
-   - enter the contract price, VAT, down payment and remaining installments;
+   - enter the Per Agreement price, VAT, down payment and remaining installments;
    - the down payment date defaults to `VITE_DEPOSIT_DATE` (1 Jan 2026) and
      stays editable;
    - list the installments already due (paid by default → invoice + payment);

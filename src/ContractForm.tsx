@@ -181,9 +181,9 @@ export default function ContractForm({
     if (!form.externalRef.trim()) list.push('Contract reference is required.')
     if (!form.partnerId && !form.partnerName.trim()) list.push('Select a client or enter the client name.')
     if (!form.unitId) list.push('Select an existing unit.')
-    if (Number(form.contractPrice) <= 0) list.push('Contract price must be greater than zero.')
+    if (Number(form.contractPrice) <= 0) list.push('Per Agreement price must be greater than zero.')
     if (effectiveDownPayment + scheduleGross > Number(form.contractPrice) + 0.01) {
-      list.push('Down payment plus the listed installments is more than the contract price.')
+      list.push('Down payment plus the listed installments is more than the Per Agreement price.')
     }
     if (remainingNet > 0.01 && form.installmentCount === 0) {
       list.push('There is a balance left; set the number of remaining installments.')
@@ -511,7 +511,7 @@ export default function ContractForm({
       <section className="card">
         <h3>3. Commercials</h3>
         <div className="grid two">
-          <label>Contract price (gross)
+          <label>Per Agreement price
             <input type="number" value={form.contractPrice || ''} onChange={(event) => set('contractPrice', Number(event.target.value) || 0)} />
           </label>
           <label className="checkbox">
@@ -616,7 +616,7 @@ export default function ContractForm({
       <section className="card totals">
         <h3>5. Preview</h3>
         <div className="grid four">
-          <div><span className="label">Contract (net)</span><b>{money(contractNet)}</b></div>
+          <div><span className="label">Per Agreement (net)</span><b>{money(contractNet)}</b></div>
           <div><span className="label">Down payment (net)</span><b>{money(downPaymentNet)}</b></div>
           <div><span className="label">Listed installments</span><b>{money(scheduleGross)}</b></div>
           <div><span className="label">Balance (net)</span><b>{money(remainingNet)}</b></div>
