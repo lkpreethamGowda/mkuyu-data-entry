@@ -145,7 +145,7 @@ textarea { resize: vertical; }
 
 .contracts-table { table-layout: fixed; min-width: 1080px; }
 .contracts-table th, .contracts-table td { padding-left: 6px; padding-right: 6px; }
-.contracts-table th { white-space: normal; vertical-align: bottom; font-size: 10px; line-height: 1.25; }
+.contracts-table th { white-space: normal; vertical-align: bottom; font-size: 10px; line-height: 1.25; letter-spacing: .02em; }
 .contracts-table td {
   font-size: 13px;
   white-space: nowrap;
@@ -154,18 +154,18 @@ textarea { resize: vertical; }
 }
 .contracts-table td.num { font-size: 12px; }
 .contracts-table col.w-ref { width: 11%; }
-.contracts-table col.w-client { width: 8%; }
-.contracts-table col.w-unit { width: 12%; }
-.contracts-table col.w-price { width: 11.5%; }
-.contracts-table col.w-dp { width: 11.5%; }
-.contracts-table col.w-paid { width: 9%; }
-.contracts-table col.w-balance { width: 11.5%; }
+.contracts-table col.w-client { width: 6.5%; }
+.contracts-table col.w-unit { width: 13%; }
+.contracts-table col.w-price { width: 10.5%; }
+.contracts-table col.w-dp { width: 11%; }
+.contracts-table col.w-paid { width: 9.5%; }
+.contracts-table col.w-balance { width: 12%; }
 .contracts-table col.w-future { width: 7%; }
-.contracts-table col.w-state { width: 8%; }
-.contracts-table col.w-error { width: 5.5%; }
+.contracts-table col.w-state { width: 10%; }
+.contracts-table col.w-error { width: 4.5%; }
 .contracts-table col.w-actions { width: 5%; }
-.contracts-table td.col-unit { white-space: normal; overflow-wrap: anywhere; }
-.contracts-table .col-state .badge { margin-left: 0; }
+.contracts-table td.col-unit { font-size: 12px; line-height: 1.25; white-space: normal; overflow-wrap: anywhere; }
+.contracts-table .badge { margin-left: 0; }
 .contracts-table .truncate { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .table th {
   text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .04em;

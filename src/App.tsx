@@ -481,9 +481,11 @@ function ContractList({
                 <tr key={item.id}>
                   <td title={item.external_ref}><b>{item.external_ref}</b></td>
                   <td title={item.client.name || ''}>{item.client.name || '—'}</td>
-                  <td className="col-unit">
+                  <td
+                    className="col-unit"
+                    title={`${item.unit.unit_code || '—'}${building ? ` · ${building.name}` : ''}`}
+                  >
                     {item.unit.unit_code || '—'}
-                    {building ? <div className="muted small">{building.name}</div> : null}
                   </td>
                   <td className="num" title={money(item.amounts.contract_gross)}>{money(item.amounts.contract_gross)}</td>
                   <td className="num" title={money(item.amounts.down_payment_net)}>{money(item.amounts.down_payment_net)}</td>
