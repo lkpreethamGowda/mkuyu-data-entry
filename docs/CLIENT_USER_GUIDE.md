@@ -52,7 +52,6 @@ At the top:
 - **Company** — Contemporary Developers Ltd
 - **Created by** — the person who loaded the list
 - **Contracts / Valid / Committed / Failed** — counts for the list
-- **Refresh** — reload the list from Odoo
 - **New contract** — add one contract
 - **Commit N contracts** — commit every draft in the list
 

@@ -88,18 +88,6 @@ export default function App() {
     return loaded
   }
 
-  async function refreshList() {
-    setBusy(true)
-    setError('')
-    try {
-      await reloadBatch()
-    } catch (exception) {
-      setError((exception as Error).message)
-    } finally {
-      setBusy(false)
-    }
-  }
-
   function openContract(item: Contract) {
     setContract(item)
     setScreen('contract')
@@ -229,7 +217,6 @@ export default function App() {
             onNew={newContract}
             onOpenContract={openContract}
             onCommitAll={handleCommitBatch}
-            onRefresh={refreshList}
           />
         ) : null}
 
@@ -347,7 +334,6 @@ function ContractList({
   onNew,
   onOpenContract,
   onCommitAll,
-  onRefresh,
 }: {
   batch: Batch
   lookups: Lookups
@@ -355,7 +341,6 @@ function ContractList({
   onNew: () => void
   onOpenContract: (contract: Contract) => void
   onCommitAll: () => void
-  onRefresh: () => void
 }) {
   const contracts = batch.contracts || []
   const draft = contracts.filter((item) => item.state !== 'committed' && item.state !== 'cancelled')
@@ -409,7 +394,6 @@ function ContractList({
           </p>
         </div>
         <div className="actions">
-          <button className="btn small" onClick={onRefresh} disabled={busy}>Refresh</button>
           <button className="btn" onClick={onNew}>New contract</button>
           <button className="btn primary" onClick={onCommitAll} disabled={busy || !draft.length}>
             {busy ? 'Committing…' : `Commit ${draft.length} contract${draft.length === 1 ? '' : 's'}`}
